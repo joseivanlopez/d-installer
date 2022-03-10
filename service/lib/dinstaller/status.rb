@@ -19,20 +19,47 @@
 # To contact SUSE LLC about this file by physical or electronic mail, you may
 # find current contact information at www.suse.com.
 
-# YaST specific code lives under this namespace
 module DInstaller
-  # This class represents the installer status
-  class InstallerStatus
+  # Installer status
+  class Status
+    ERROR = 0.freeze
+    NOT_PROBED = 1.freeze
+    PROBING = 2.freeze
+    PROBED = 3.freeze
+    INSTALLING = 4.freeze
+    INSTALLED = 5.freeze
+
+    # @return [Integer]
     attr_reader :id
 
+    # Constructor
+    #
+    # @param id [Integer] initial status
     def initialize(id)
       @id = id
+      @on_change_callbacks = []
     end
 
-    ERROR = new(0)
-    PROBING = new(1)
-    PROBED = new(2)
-    INSTALLING = new(3)
-    INSTALLED = new(4)
+    # Changes the status
+    #
+    # Callbacks are called.
+    #
+    # @param id [Integer] new status
+    def change(id)
+      @id = id
+      on_change_callbacks.each(&:call)
+    end
+
+    # Registers a callback to be called when the status changes
+    def on_change(&block)
+      @on_change_callbacks << block
+    end
+
+  private
+
+    # Callbacks to be called when the status changes
+    #
+    # @return [Array[Proc]]
+    attr_reader :on_change_callbacks
   end
 end
