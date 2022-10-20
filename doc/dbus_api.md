@@ -113,93 +113,91 @@ Iface: o.o.YaST.Installer1.Software
 
 ## Storage
 
-### Iface: o.o.YaST.Installer1.Storage
+### org.opensuse.DInstaller.Storage1
 
-#### methods:
+#### Methods
 
--  MarkForUse(array(o.o.YaST.Installer1.Storage.BlockDevice Device)) -> void
-    set objects for use of installation. it means erase content of that devices
-    example:
+- Probe -> void
 
-      MarkForUse([disk1,disk2partition2]) -> ()
+- Install -> void
 
--  MarkForShrinking(array(o.o.YaST.Installer1.Storage.BlockDevice Device)) -> void
-    set objects to allow shrink of them. it means keep content and reduce its free space.
-    example:
+- Finish -> void
 
-      MarkForShrink([disk1,disk2partition2]) -> ()
+### org.opensuse.DInstaller.Proposal1
 
-#### Properties (all read only):
+** Making space is not covered yet**
 
--  Drives -> array(o.o.YaST.Installer1.Storage.Drive)  # an object\_path whose object implements this interface
-    List of all disks.
-    Example:
+#### Properties
 
-      Drives -> [disk1, disk2]
+- AvailableDevices -> a(ssa{sv}) (r)
 
--  Partitions -> array(o.o.YaST.Installer1.Storage.Partition)
-    List of all partitions.
-    Example:
+- CandiateDevices -> as (rw)
 
-      Disks -> [disk1partition1, disk1partition2, disk2partition1]
+- LVM -> b (rw)
 
--  DevicesToUse -> array(o.o.YaST.Installer1.Storage.BlockDevice)
-    Devices that will be fully used by installation
-    Example:
+- EncryptionPassword -> s (rw)
 
-      DevicesToUse -> [disk1,disk2partition2]
+#### Methods
 
--  DevicesToShrink -> array(o.o.YaST.Installer1.Storage.BlockDevice)
-    Devices that will be shrinked to make space for installation
-    Example:
+- Calculate -> unsigned (0 success, 1 fail)
+  Calculates a proposal with the configured settings and volumes.
 
-      DevicesToShrink -> [disk1,disk2partition2]
+#### Signals
 
-#### Signals:
+- Calculated(array(array(dict(string, variant))))
+  Signal emitted after calculating a proposal. It passes the storage actions.
 
-  PropertiesChanged ( only standard one from org.freedesktop.DBus.Properties interface )
+### org.opensuse.DInstaller.Storage.Proposal.Volumes1
 
-### Iface: o.o.YaST.Installer1.Storage.BlockDevice
+#### Methods
 
-Inspired by Udisks2.Block
+- Add(aa{sv}) -> u (0 success, 1 fail)
+  Adds a new volume.
 
-#### Properties (all read only):
+- Delete(u) -> u (0 success, 1 fail)
+  Deletes a volume with the given id.
 
--  Device -> string DevPath
-    Block device name in /dev like "/dev/sda"
+The D-Bus service exports a */org/opensuse/DInstaller/Storage/Proposal/Volumes1* object that implements the *org.freedesktop.DBus.ObjectManager* interface. Individual objects are dynamically exported in a tree under the */org/opensuse/DInstaller/Storage/Proposal/Volumes1* path, for example:
 
--  Size -> uint64 SizeInBytes
-    Size of devices in bytes
+~~~
+/org/opensuse/DInstaller/Storage/Proposal/Volumes1
+  /org/opensuse/DInstaller/Storage/Proposal/Volumes1/1
+  /org/opensuse/DInstaller/Storage/Proposal/Volumes1/2
+  /org/opensuse/DInstaller/Storage/Proposal/Volumes1/3
+~~~
 
--  ReadOnly -> boolean
-    if device is read only
+Each D-Bus volume implements the interface *org.opensuse.DInstaller.Storage.Proposal.Volume1*
 
-### Iface: o.o.YaST.Installer1.Storage.Drive
+### org.opensuse.DInstaller.Storage.Proposal.Volume1
 
-Inspired by Udisks2.Drive
+#### Properties
 
-#### Properties (all read only):
+- Id -> u (r)
+  Volume id. The volume is exported at *root_path/id*.
 
--  Vendor -> string
-    Vendor of device or empty string if not known like "Fujitsu"
+- MountPoint -> s (rw)
 
--  Model -> string
-    Device model or empty string if not known
+- FixedSizeLimits -> b (rw)
 
--  Removable -> boolean
-    if device is removable like usb sticks
+- MinSize -> s (rw)
 
--  Partitions -> array(o.o.YaST.Installer1.Storage.Partition)
-    partitions on given drive
+- MaxSize -> s (rw)
 
-### Iface: o.o.YaST.Installer1.Storage.Partition
+- FsTypes -> aa{sv} (r)
 
-Inspired by Udisks2.Partition
+  All possible fs types for the volume:
 
-#### Properties (all read only):
+  ~~~
+  [
+    {"id" => 0, "label" => "Btrfs"},
+    {"id" => 1, "label" => "XFS"}
+  ]
+  ~~~
 
--  Drive -> o.o.YaST.Installer1.Storage.Drive
-    where partitions live
+- FsType -> u (rw)
+
+- Snapshots -> b (rw)
+
 
 ## Users
 
