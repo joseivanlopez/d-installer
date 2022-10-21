@@ -41,15 +41,11 @@ module DInstaller
       def initialize(logger, config)
         @logger = logger
         @config = config
-        @listeners = []
+        @on_calculate_callbacks = []
       end
 
-      def add_on_change_listener(&block)
-        @listeners << block
-      end
-
-      def changed!
-        @listeners.each(&:call)
+      def on_calculate(&block)
+        @on_calculate_callbacks << block
       end
 
       # Available devices for installation
@@ -123,7 +119,7 @@ module DInstaller
         @proposal = new_proposal(proposal_settings)
         storage_manager.proposal = proposal
 
-        changed!
+        @on_calculate_callbacks.each(&:call)
 
         !proposal.failed?
       end

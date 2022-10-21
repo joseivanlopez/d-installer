@@ -130,73 +130,46 @@ Iface: o.o.YaST.Installer1.Software
 #### Properties
 
 - AvailableDevices -> a(ssa{sv}) (r)
+  e.g., ["/dev/sda", "/dev/sda, 8.00 GiB, USB", {}]
 
-- CandiateDevices -> as (rw)
+- CandidateDevices -> as (r)
 
-- LVM -> b (rw)
+- LVM -> b (r)
 
-- EncryptionPassword -> s (rw)
+- EncryptionPassword -> s (r)
+
+- VolumeTemplates -> aa{sv} (r)
+  Struct keys and values: see Volumes
+
+- Volumes -> aa{sv} (r)
+  Struct keys and values:
+  - LogicalVolume -> b
+  - Optional -> b
+  - Encrypted -> b
+  - MountPoint -> s
+  - AutoSizes -> b
+  - AutoSizesEditable -> b
+  - MinSize -> s
+  - MaxSize -> s
+  - FsTypes -> as
+    e.g., ["Btrfs", "XFS"]
+  - FsType -> s
+  - Snapshots -> b
+  - SnapshotsEditable -> b
+  - SnapshotsAffectSizes -> b
+  - VolumesWithFallbackSizes -> as
+    e.g., ["/home", "/var"]
+
+- Actions -> aa{sv} (r)
+  Struct keys and values:
+  - Text -> s (r)
+  - Subvol -> b (r)
+  - Delete -> b (r)
 
 #### Methods
 
-- Calculate -> unsigned (0 success, 1 fail)
-  Calculates a proposal with the configured settings and volumes.
-
-#### Signals
-
-- Calculated(array(array(dict(string, variant))))
-  Signal emitted after calculating a proposal. It passes the storage actions.
-
-### org.opensuse.DInstaller.Storage.Proposal.Volumes1
-
-#### Methods
-
-- Add(aa{sv}) -> u (0 success, 1 fail)
-  Adds a new volume.
-
-- Delete(u) -> u (0 success, 1 fail)
-  Deletes a volume with the given id.
-
-The D-Bus service exports a */org/opensuse/DInstaller/Storage/Proposal/Volumes1* object that implements the *org.freedesktop.DBus.ObjectManager* interface. Individual objects are dynamically exported in a tree under the */org/opensuse/DInstaller/Storage/Proposal/Volumes1* path, for example:
-
-~~~
-/org/opensuse/DInstaller/Storage/Proposal/Volumes1
-  /org/opensuse/DInstaller/Storage/Proposal/Volumes1/1
-  /org/opensuse/DInstaller/Storage/Proposal/Volumes1/2
-  /org/opensuse/DInstaller/Storage/Proposal/Volumes1/3
-~~~
-
-Each D-Bus volume implements the interface *org.opensuse.DInstaller.Storage.Proposal.Volume1*
-
-### org.opensuse.DInstaller.Storage.Proposal.Volume1
-
-#### Properties
-
-- Id -> u (r)
-  Volume id. The volume is exported at *root_path/id*.
-
-- MountPoint -> s (rw)
-
-- FixedSizeLimits -> b (rw)
-
-- MinSize -> s (rw)
-
-- MaxSize -> s (rw)
-
-- FsTypes -> aa{sv} (r)
-
-  All possible fs types for the volume:
-
-  ~~~
-  [
-    {"id" => 0, "label" => "Btrfs"},
-    {"id" => 1, "label" => "XFS"}
-  ]
-  ~~~
-
-- FsType -> u (rw)
-
-- Snapshots -> b (rw)
+- Calculate(aa{sv}) -> u (0 success, 1 fail)
+  Calculates a new proposal with the given properties (see proposal properties).
 
 
 ## Users

@@ -65,16 +65,20 @@ module DInstaller
           # com.redhat.Blivet0.Device or org.freedesktop.UDisks2.Block.
           dbus_reader :available_devices, "a(ssa{sv})"
 
+          dbus_reader :encryption_password, "s"
+
+          dbus_reader :volumes, "aa{sv}"
+
+          dbus_reader :actions, "aa{sv}"
+
           # result: 0 success; 1 error
           dbus_method :Calculate, "in settings:a{sv}, out result:u" do |settings|
             success = busy_while do
-              backend.calculate(to_proposal_properties(settings))
+              backend.calculate(to_proposal_settings(settings))
             end
 
             success ? 0 : 1
           end
-
-          dbus_reader :actions, "aa{sv}"
         end
 
         # List of disks available for installation
@@ -93,25 +97,33 @@ module DInstaller
 
         # @see DInstaller::Storage::Proposal
         def lvm
-          backend.lvm?
+          backend.settings.lvm?
         rescue DInstaller::Storage::Proposal::NoProposalError
           false
         end
 
         # @see DInstaller::Storage::Proposal
         def candidate_devices
-          backend.candidate_devices
+          backend.settings.candidate_devices
         rescue DInstaller::Storage::Proposal::NoProposalError
           []
         end
 
+        def encryption_password
+          backend.settings.encryption_password
+        end
+
+        def volumes
+          backend.settings.volumes.map { |v| to_dbus_volume(v) }
+        end
+
         # List of sorted actions in D-Bus format
         #
-        # @see #to_dbus
+        # @see #to_dbus_action
         #
         # @return [Array<Hash>]
         def actions
-          backend.actions.all.map { |a| action_to_dbus(a) }
+          backend.actions.all.map { |a| to_dbus_action(a) }
         end
 
       private
@@ -122,42 +134,90 @@ module DInstaller
         # @return [Logger]
         attr_reader :logger
 
-        # Equivalence between properties names in D-Bus and backend.
-        PROPOSAL_PROPERTIES = {
-          "LVM"              => "use_lvm",
-          "CandidateDevices" => "candidate_devices"
-        }.freeze
-        private_constant :PROPOSAL_PROPERTIES
-
         # Registers callback to be called when properties change
         def register_callbacks
-          backend.add_on_change_listener do
-            dbus_properties_changed(STORAGE_PROPOSAL_INTERFACE, { "LVM" => lvm,
-              "CandidateDevices" => candidate_devices,
-              "AvailableDevices" => available_devices,
-              "Actions" => actions }, [])
+          backend.on_calculate do
+            properties = interfaces_and_properties[STORAGE_PROPOSAL_INTERFACE]
+            dbus_properties_changed(STORAGE_PROPOSAL_INTERFACE, properties, [])
           end
         end
 
         # Converts settings from D-Bus to backend names
         #
-        # @example
-        #   settings = { "LVM" => true, "CandidateDevices" => ["/dev/sda"] }
-        #   to_proposal_settings(settings) #=>
-        #     { "use_lvm" => true, "candidate_devices" => ["/dev/sda"] }
-        #
         # @param settings [Hash]
-        def to_proposal_properties(settings)
-          settings.each_with_object({}) do |e, h|
-            h[PROPOSAL_PROPERTIES[e.first]] = e.last
+        def to_proposal_settings(dbus_settings)
+          ProposalSettings.new.tap do |proposal_settings|
+            dbus_settings.each do |dbus_property, dbus_value|
+              setter, value = case dbus_property
+                when "CandidateDevices"
+                  ["candidate_devices=", dbus_value]
+                when "LVM"
+                  ["use_lvm=", dbus_value]
+                when "EncryptionPassword"
+                  ["encryption_password=", dbus_value]
+                when "Volumes"
+                  ["volumes=", dbus_value.map { |v| to_proposal_volume(v) }]
+                end
+
+              proposal_settings.public_send(setter, value)
+            end
           end
+        end
+
+        def to_proposal_volume(dbus_volume)
+          Volume.new.tap do |volume|
+            dbus_volume.each do |dbus_property, dbus_value|
+              setter, value = case dbus_property
+                when "LogicalVolume"
+                  ["lvm_lv=", dbus_value]
+                when "Encrypted"
+                  ["encrypted=", dbus_value]
+                when "MountPoint"
+                  ["mount_point=", dbus_value]
+                when "AutoSizes"
+                  ["auto_sizes=", dbus_value]
+                when "MinSize"
+                  ["min_size=", Y2Storage::DiskSize.new(dbus_value)]
+                when "MaxSize"
+                  ["max_size=", Y2Storage::DiskSize.new(dbus_value)]
+                when "FSType"
+                  ["fs_type=", to_fs_type(dbus_value)]
+                when "Snapshots"
+                  ["snapshots=", dbus_value]
+                end
+
+              volume.public_send(setter, value)
+            end
+          end
+        end
+
+        def to_fs_type(dbus_fs_type)
+          Y2Storage::Filesystems::Type.all.find { |t| t.to_human_string == dbus_fs_type }
+        end
+
+        def to_dbus_volume(volume)
+          {
+            "LogicalVolume"            => volume.lvm_lv?,
+            "Optional"                 => volume.configurable?,
+            "Encrypted"                => volume.encrypted?,
+            "AutoSizes"                => volume.auto_sizes?,
+            "AutoSizesEditable"        => volume.auto_size_editable?,
+            "MinSize"                  => volume.min_size.to_i,
+            "MaxSize"                  => volume.max_size.to_i,
+            "FsTypes"                  => volume.fs_types.map(&:to_human_string),
+            "FsType"                   => volume.fs_type.to_human_string,
+            "Snapshots"                => volume.snapshots?,
+            "SnapshotsEditable"        => volume.snapshots_editable?,
+            "SnapshotsAffectSizes"     => volume.snapshots_affect_sizes?,
+            "VolumesWithFallbackSizes" => volume.volumes_with_fallback_sizes
+          }
         end
 
         # Converts an action to D-Bus format
         #
         # @param action [Y2Storage::CompoundAction]
         # @return [Hash]
-        def action_to_dbus(action)
+        def to_dbus_action(action)
           {
             "Text"   => action.sentence,
             "Subvol" => action.device_is?(:btrfs_subvolume),
