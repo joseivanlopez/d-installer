@@ -28,9 +28,22 @@ module DInstaller
       class << self
         # When the proposal is already calculated, to show them
         def from_proposal(proposal)
-          proposal.settings.volumes.select(&:proposed).map do |spec|
+          specs = proposal.settings.volumes
+          specs.select(&:proposed).map do |spec|
             vol = new(proposal)
             vol.specification = spec
+            vol.init_size_relevant_volumes(specs)
+            vol
+          end
+        end
+
+        def from_config(config)
+          entries = config.data.fetch("storage", {}).fetch("volumes", [])
+          specs = entries.map { |e| Y2Storage::VolumeSpecification.new(e) }
+          specs.map do |spec|
+            vol = new
+            vol.specification = spec
+            vol.init_size_relevant_volumes(specs)
             vol
           end
         end
@@ -63,6 +76,7 @@ module DInstaller
 
       def initialize(proposal = nil)
         @proposal = proposal
+        @size_relevant_volumes = []
       end
 
       attr_writer :mount_point
@@ -72,6 +86,10 @@ module DInstaller
       attr_writer :fs_type
       attr_writer :snapshots
       attr_reader :proposal
+
+      # Related volumes that may affect the calculation of the automatic size limits
+      # @return [Array<String>]
+      attr_reader :size_relevant_volumes
 
       # This syncs the specification, so maybe a setter is not the best way
       def specification=(spec)
@@ -157,9 +175,12 @@ module DInstaller
       end
 
       # Whether the device is encrypted directly or indirectly (eg. a LV in an encrypted LVM VG)
+      #
+      # This implementation is not future-proof because does not allow to mix encrypted and not
+      # encrypted devices, but it will have to serve for now
       def encrypted?
-        # This implementation is not future-proof because does not allow to mix encrypted and not
-        # encrypted devices, but it will have to serve for now
+        return nil unless proposal
+
         proposal.settings.use_encryption
       end
 
@@ -181,19 +202,17 @@ module DInstaller
         specification.snapshots_percentage && !specification.snapshots_percentage.zero?
       end
 
-      # Related volumes that may affect the calculation of the automatic size limits
-      # @return [Array<String>]
-      def size_relevant_volumes
+      def init_size_relevant_volumes(specs)
         # FIXME this should be a responsibility of the Proposal (since it's calculated by
         # Proposal::DevicesPlanner)
-        @size_relevant_volumes ||=
-          # FIXME: not sure if the deleted volumes will remain there (as proposed = false)
-          proposal.settings.volumes.select { |v| fallback?(v, mount_point) }.map(&:mount_point)
+        @size_relevant_volumes = specs.select { |v| fallback?(v, mount_point) }.map(&:mount_point)
       end
 
     private
 
       def planned_device
+        return nil unless proposal
+
         @planned_device ||= proposal.planned_devices.find do |dev|
           dev.respond_to?(:mount_point) && same_path?(dev.mount_point, mount_point)
         end

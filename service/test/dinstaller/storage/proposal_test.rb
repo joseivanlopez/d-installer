@@ -69,7 +69,7 @@ describe DInstaller::Storage::Proposal do
               },
               {
                 "mount_point" => "/two", "fs_type" => "xfs", "min_size" => "5 GiB",
-                "proposed_configurable" => true
+                "proposed_configurable" => true, "fallback_for_min_size" => "/"
               }
             ]
           }
@@ -96,7 +96,11 @@ describe DInstaller::Storage::Proposal do
         root.mount_point = "/"
         root.snapshots = true
 
-        proposal.calculate({"use_lvm" => true}, volumes: [root])
+        settings = DInstaller::Storage::ProposalSettings.new(config)
+        settings.use_lvm = true
+        settings.volumes = [root]
+
+        proposal.calculate(settings)
         expect(proposal.volumes.size).to eq 1
         expect(proposal.volumes.first.fixed_size_limits).to eq false
         #byebug
