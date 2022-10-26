@@ -19,10 +19,6 @@
 # To contact SUSE LLC about this file by physical or electronic mail, you may
 # find current contact information at www.suse.com.
 
-require "pathname"
-require "y2storage"
-require "dinstaller/storage/volume"
-
 module DInstaller
   module Storage
     # Backend class to represent the settings passed to Proposal#calculate
@@ -51,9 +47,7 @@ module DInstaller
       # @return [Array<Volume>]
       attr_accessor :volumes
 
-      # @param config [Config]
-      def initialize(config)
-        @config = config
+      def initialize
         @use_lvm = false
         @volumes = []
       end
@@ -75,36 +69,6 @@ module DInstaller
           DISPLAYED_SETTINGS.map { |s| "    #{s}: #{send(s)}\n" }.join +
           "  volumes:\n" \
           "    #{volumes}"
-      end
-
-      # Generates a Y2Storage::ProposalSettings object from the given values
-      #
-      # @return [Y2Storage::ProposalSettings]
-      def to_y2storage
-        settings = Y2Storage::ProposalSettings.new_for_current_product
-
-        init_config_volumes(settings)
-        Volume.adapt_settings(settings, volumes) if volumes&.any?
-
-        settings.use_lvm = use_lvm
-        settings.encryption_password = encryption_password
-        settings.candidate_devices = candidate_devices
-
-        settings
-      end
-
-    private
-
-      # @return [Config]
-      attr_reader :config
-
-      # @param settings [Y2Storage::ProposalSettings]
-      def init_config_volumes(settings)
-        vol_specs = Volume.from_config(config).map(&:specification)
-        # If no volumes are specified, just leave the default ones (hardcoded at Y2Storage)
-        return if vol_specs.empty?
-
-        settings.volumes = vol_specs
       end
     end
   end

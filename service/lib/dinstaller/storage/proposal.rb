@@ -62,7 +62,7 @@ module DInstaller
       #
       # @return [Array<Volumes>]
       def volume_templates
-        Volume.from_config(config)
+        volumes_from_config
       end
 
       # Label that should be used to represent the given disk in the UI
@@ -104,17 +104,17 @@ module DInstaller
       def volumes
         raise NoProposalError unless proposal
 
-        Volume.from_proposal(proposal)
+        volumes_from_proposal(only_proposed: true)
       end
 
       # Calculates a new proposal
       #
       # @param settings [ProposalSettings] settings to calculate the proposal
       # @return [Boolean] whether the proposal was correctly calculated
-      def calculate(settings = ProposalSettings.new(config))
-        @settings = settings
+      def calculate(settings = nil)
+        @settings = settings || default_settings
         @settings.freeze
-        proposal_settings = settings.to_y2storage
+        proposal_settings = calculate_y2storage_settings
 
         @proposal = new_proposal(proposal_settings)
         storage_manager.proposal = proposal
@@ -153,6 +153,69 @@ module DInstaller
         )
         guided.propose
         guided
+      end
+
+      def default_settings
+        ProposalSetings.new.tap do |settings|
+          settings.volumes = volumes_from_config(only_proposed: true)
+        end
+      end
+
+      def volumes_from_config(only_proposed: false)
+        all_specs = specs_from_config
+        specs = only_proposed ? all_specs.select(&:proposed?) : all_specs
+
+        specs.map do |spec|
+          Volume.new(s).tap { |v| v.assing_size_relevant_volumes(all_specs) }
+        end
+      end
+
+      def specs_from_config
+        config_volumes = config.data.fetch("storage", {}).fetch("volumes", [])
+        config_volumes.map { |v| Y2Storage::VolumeSpecification.new(v) }
+      end
+
+      def volumes_from_proposal(only_proposed: false)
+        all_specs = specs_from_proposal
+        specs = only_proposed ? all_specs.select(&:proposed?) : all_specs
+
+        specs.map do |spec|
+          Volume.new(spec).tap do |volume|
+            volume.assign_size_relevant_volumes(all_specs)
+            volume.encrypted = proposal.settings.use_encryption
+            planned = planned_device_for(volume)
+            if planned
+              volume.min_size = planned.min
+              volume.max_size = planned.max
+              volume.device_type = planned.respond_to?(:lv_type) ? :logical_volume : :partition
+            end
+          end
+        end
+      end
+
+      def specs_from_proposal
+        raise NoProposalError unless proposal
+
+        proposal.settings.volumes
+      end
+
+      def planned_device_for(volume)
+        return nil unless proposal
+
+        proposal.planned_devices.find do |device|
+          device.respond_to?(:mount_point) && volume.mounted_at?(device.mount_point)
+        end
+      end
+
+      def calculate_y2storage_settings
+        raise NoProposalError unless settings
+
+        Y2Storage::ProposalSettings.new_for_current_product.tap do |proposal_settings|
+          proposal_settings.use_lvm = settings.use_lvm?
+          proposal_settings.encryption_password = settings.encryption_password
+          proposal_settings.candidate_devices = settings.candidate_devices
+          proposal_settings.volumes = settings.volumes.map(&:spec)
+        end
       end
 
       # @return [Y2Storage::DiskAnalyzer]
