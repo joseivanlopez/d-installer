@@ -104,7 +104,13 @@ module DInstaller
       def volumes
         raise NoProposalError unless proposal
 
-        volumes_from_proposal(only_proposed: true)
+        volumes = volumes_from_proposal(only_proposed: true)
+        volumes.each do |volume|
+          config_spec = config_spec_for(volume)
+          volume.optional = config_spec ? config_spec.proposed_configurable? : true
+        end
+
+        volumes
       end
 
       # Calculates a new proposal
@@ -175,6 +181,10 @@ module DInstaller
         config_volumes.map { |v| Y2Storage::VolumeSpecification.new(v) }
       end
 
+      def config_spec_for(volume)
+        specs_from_config.find { |s| volume.mounted_at?(s.mount_point) }
+      end
+
       def volumes_from_proposal(only_proposed: false)
         all_specs = specs_from_proposal
         specs = only_proposed ? all_specs.select(&:proposed?) : all_specs
@@ -185,9 +195,9 @@ module DInstaller
             volume.encrypted = proposal.settings.use_encryption
             planned = planned_device_for(volume)
             if planned
+              volume.device_type = planned.respond_to?(:lv_type) ? :logical_volume : :partition
               volume.min_size = planned.min
               volume.max_size = planned.max
-              volume.device_type = planned.respond_to?(:lv_type) ? :logical_volume : :partition
             end
           end
         end

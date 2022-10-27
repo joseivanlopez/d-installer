@@ -50,6 +50,8 @@ module DInstaller
       def_delegator :@spec, :snapshots?
       def_delegator :@spec, :snapshots=
       def_delegator :@spec, :snapshots_configurable?
+      def_delegator :@spec, :proposed_configurable?, :optional?
+      def_delegator :@spec, :proposed_configurable=, :optional=
 
       def initialize(spec = nil)
         @spec = spec || Y2Storage::VolumeSpecification.new

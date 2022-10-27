@@ -24,6 +24,7 @@ require "dinstaller/dbus/base_object"
 require "dinstaller/dbus/with_service_status"
 require "dinstaller/dbus/interfaces/service_status"
 require "dinstaller/storage/proposal"
+require "dinstaller/storage/proposal_settings"
 
 module DInstaller
   module DBus
@@ -59,15 +60,13 @@ module DInstaller
           # The first string is the name of the device (as expected by #Calculate for
           # the setting CandidateDevices), the second one is the label to represent that device in
           # the UI when further information is needed.
-          #
-          # TODO: this representation is a temporary solution. In the future we should likely
-          # return more complex structures, probably with an interface similar to
-          # com.redhat.Blivet0.Device or org.freedesktop.UDisks2.Block.
           dbus_reader :available_devices, "a(ssa{sv})"
 
           dbus_reader :encryption_password, "s"
 
           dbus_reader :volumes, "aa{sv}"
+
+          dbus_reader :volume_templates, "aa{sv}"
 
           dbus_reader :actions, "aa{sv}"
 
@@ -114,7 +113,7 @@ module DInstaller
         end
 
         def volumes
-          backend.settings.volumes.map { |v| to_dbus_volume(v) }
+          backend.volumes.map { |v| to_dbus_volume(v) }
         end
 
         # List of sorted actions in D-Bus format
@@ -168,14 +167,14 @@ module DInstaller
           Volume.new.tap do |volume|
             dbus_volume.each do |dbus_property, dbus_value|
               setter, value = case dbus_property
-                when "LogicalVolume"
-                  ["lvm_lv=", dbus_value]
+                when "DeviceType"
+                  ["device_type=", dbus_value.to_sym]
                 when "Encrypted"
                   ["encrypted=", dbus_value]
                 when "MountPoint"
                   ["mount_point=", dbus_value]
-                when "AutoSizes"
-                  ["auto_sizes=", dbus_value]
+                when "FixedSizeLimits"
+                  ["fixed_size_limits=", dbus_value]
                 when "MinSize"
                   ["min_size=", Y2Storage::DiskSize.new(dbus_value)]
                 when "MaxSize"
@@ -197,19 +196,19 @@ module DInstaller
 
         def to_dbus_volume(volume)
           {
-            "LogicalVolume"            => volume.lvm_lv?,
-            "Optional"                 => volume.configurable?,
+            "DeviceType"               => volume.device_type.to_s,
+            "Optional"                 => volume.optional?,
             "Encrypted"                => volume.encrypted?,
-            "AutoSizes"                => volume.auto_sizes?,
-            "AutoSizesEditable"        => volume.auto_size_editable?,
+            "FixedSizeLimits"          => volume.fixed_size_limits?,
+            "AdaptativeSizes"          => volume.adaptative_sizes?,
             "MinSize"                  => volume.min_size.to_i,
             "MaxSize"                  => volume.max_size.to_i,
             "FsTypes"                  => volume.fs_types.map(&:to_human_string),
             "FsType"                   => volume.fs_type.to_human_string,
             "Snapshots"                => volume.snapshots?,
-            "SnapshotsEditable"        => volume.snapshots_editable?,
+            "SnapshotsConfigurable"    => volume.snapshots_configurable?,
             "SnapshotsAffectSizes"     => volume.snapshots_affect_sizes?,
-            "VolumesWithFallbackSizes" => volume.volumes_with_fallback_sizes
+            "SizeRelevantVolumes"      => volume.size_relevant_volumes
           }
         end
 

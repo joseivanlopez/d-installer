@@ -143,19 +143,20 @@ Iface: o.o.YaST.Installer1.Software
 
 - Volumes -> aa{sv} (r)
   Struct keys and values:
-  - LogicalVolume -> b
+  - DeviceType -> s
+  e.g., "partition", "lvm_lv"
   - Optional -> b
   - Encrypted -> b
   - MountPoint -> s
-  - AutoSizes -> b
-  - AutoSizesEditable -> b
+  - FixedSizeLimits -> b
+  - AdaptativeSizes -> b
   - MinSize -> s
   - MaxSize -> s
   - FsTypes -> as
     e.g., ["Btrfs", "XFS"]
   - FsType -> s
   - Snapshots -> b
-  - SnapshotsEditable -> b
+  - SnapshotsConfigurable -> b
   - SnapshotsAffectSizes -> b
   - VolumesWithFallbackSizes -> as
     e.g., ["/home", "/var"]
