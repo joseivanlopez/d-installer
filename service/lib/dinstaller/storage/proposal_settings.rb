@@ -19,6 +19,8 @@
 # To contact SUSE LLC about this file by physical or electronic mail, you may
 # find current contact information at www.suse.com.
 
+require "y2storage/secret_attributes"
+
 module DInstaller
   module Storage
     # Backend class to represent the settings passed to Proposal#calculate

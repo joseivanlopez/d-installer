@@ -23,7 +23,6 @@ require "dbus"
 require "dinstaller/dbus/base_object"
 require "dinstaller/dbus/with_service_status"
 require "dinstaller/dbus/interfaces/service_status"
-require "dinstaller/storage/proposal"
 require "dinstaller/storage/proposal_settings"
 
 module DInstaller
@@ -96,19 +95,21 @@ module DInstaller
 
         # @see DInstaller::Storage::Proposal
         def lvm
+          return false unless backend.settings
+
           backend.settings.lvm?
-        rescue DInstaller::Storage::Proposal::NoProposalError
-          false
         end
 
         # @see DInstaller::Storage::Proposal
         def candidate_devices
+          return [] unless backend.settings
+
           backend.settings.candidate_devices
-        rescue DInstaller::Storage::Proposal::NoProposalError
-          []
         end
 
         def encryption_password
+          return "" unless backend.settings
+
           backend.settings.encryption_password
         end
 

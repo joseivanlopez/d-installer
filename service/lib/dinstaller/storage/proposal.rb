@@ -32,8 +32,6 @@ module DInstaller
     class Proposal
       include WithProgress
 
-      class NoProposalError < StandardError; end
-
       # Constructor
       #
       # @param logger [Logger]
@@ -85,11 +83,9 @@ module DInstaller
 
       # Settings that were used to calculate the proposal
       #
-      # @raise [NoProposalError] if no proposal yet
-      #
-      # @return [ProposalSettings]
+      # @return [ProposalSettings, nil]
       def settings
-        raise NoProposalError unless @settings
+        return nil unless proposal
 
         @settings
       end
@@ -98,11 +94,9 @@ module DInstaller
       #
       # Not to be confused with settings.volumes, which are used as starting point
       #
-      # @raise [NoProposalError] if no proposal yet
-      #
       # @return [Array<Volumes>]
       def volumes
-        raise NoProposalError unless proposal
+        return [] unless proposal
 
         volumes = volumes_from_proposal(only_proposed: true)
         volumes.each do |volume|
@@ -204,7 +198,7 @@ module DInstaller
       end
 
       def specs_from_proposal
-        raise NoProposalError unless proposal
+        return [] unless proposal
 
         proposal.settings.volumes
       end
@@ -218,7 +212,7 @@ module DInstaller
       end
 
       def calculate_y2storage_settings
-        raise NoProposalError unless settings
+        return nil unless settings
 
         Y2Storage::ProposalSettings.new_for_current_product.tap do |proposal_settings|
           proposal_settings.use_lvm = settings.use_lvm?
