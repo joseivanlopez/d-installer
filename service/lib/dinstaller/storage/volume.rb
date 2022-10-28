@@ -32,7 +32,12 @@ module DInstaller
       attr_reader :spec
 
       attr_accessor :device_type
+
       attr_accessor :encrypted
+      alias_method :encrypted?, :encrypted
+
+      attr_accessor :optional
+      alias_method :optional?, :optional
 
       # Related volumes that may affect the calculation of the automatic size limits
       # @return [Array<String>]
@@ -50,16 +55,15 @@ module DInstaller
       def_delegator :@spec, :snapshots?
       def_delegator :@spec, :snapshots=
       def_delegator :@spec, :snapshots_configurable?
-      def_delegator :@spec, :proposed_configurable?, :optional?
-      def_delegator :@spec, :proposed_configurable=, :optional=
 
       def initialize(spec = nil)
-        @spec = spec || Y2Storage::VolumeSpecification.new
+        @spec = spec ? spec.dup : Y2Storage::VolumeSpecification.new
         @spec.proposed = true
         @spec.proposed_configurable = false
 
         @device_type = :partition
         @encrypted = false
+        @optional = @spec.proposed_configurable?
         @size_relevant_volumes = []
       end
 

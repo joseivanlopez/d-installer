@@ -53,16 +53,6 @@ module DInstaller
         disk_analyzer.candidate_disks
       end
 
-      # Volume definitions to be used as templates in the interface
-      #
-      # Based on the configuration and/or on Y2Storage internals, these volumes may really
-      # exist or not in the real context of the proposal and its settings.
-      #
-      # @return [Array<Volumes>]
-      def volume_templates
-        volumes_from_config
-      end
-
       # Label that should be used to represent the given disk in the UI
       #
       # NOTE: this is likely a temporary solution. The label should not be calculated in the backend
@@ -90,21 +80,46 @@ module DInstaller
         @settings
       end
 
+      # Volume definitions to be used as templates in the interface
+      #
+      # Based on the configuration and/or on Y2Storage internals, these volumes may really
+      # exist or not in the real context of the proposal and its settings.
+      #
+      # @return [Array<Volumes>]
+      def volume_templates
+        VolumesGenerator.new(specs_from_config).volumes
+      end
+
       # Volumes used during the calculation of the proposal
       #
       # Not to be confused with settings.volumes, which are used as starting point
       #
       # @return [Array<Volumes>]
-      def volumes
+      def calculated_volumes
         return [] unless proposal
 
-        volumes = volumes_from_proposal(only_proposed: true)
+        generator = VolumesGenerator.new(specs_from_proposal,
+          planned_devices: proposal.planned_devices)
+
+        volumes = generator.volumes(only_proposed: true)
+
         volumes.each do |volume|
           config_spec = config_spec_for(volume)
-          volume.optional = config_spec ? config_spec.proposed_configurable? : true
+          volume.optional = config_spec.proposed_configurable? if config_spec
+          volume.encrypted = proposal.settings.use_encryption
         end
 
         volumes
+      end
+
+      def default_settings
+        ProposalSettings.new.tap do |settings|
+          generator = VolumesGenerator.new(specs_from_config)
+          volumes = generator.volumes(only_proposed: true)
+          volumes.map { |v| v.encrypted = settings.use_encryption? }
+
+          settings.volumes = volumes
+        end
       end
 
       # Calculates a new proposal
@@ -114,7 +129,7 @@ module DInstaller
       def calculate(settings = nil)
         @settings = settings || default_settings
         @settings.freeze
-        proposal_settings = calculate_y2storage_settings
+        proposal_settings = to_y2storage_settings(@settings)
 
         @proposal = new_proposal(proposal_settings)
         storage_manager.proposal = proposal
@@ -155,46 +170,9 @@ module DInstaller
         guided
       end
 
-      def default_settings
-        ProposalSetings.new.tap do |settings|
-          settings.volumes = volumes_from_config(only_proposed: true)
-        end
-      end
-
-      def volumes_from_config(only_proposed: false)
-        all_specs = specs_from_config
-        specs = only_proposed ? all_specs.select(&:proposed?) : all_specs
-
-        specs.map do |spec|
-          Volume.new(s).tap { |v| v.assing_size_relevant_volumes(all_specs) }
-        end
-      end
-
       def specs_from_config
         config_volumes = config.data.fetch("storage", {}).fetch("volumes", [])
         config_volumes.map { |v| Y2Storage::VolumeSpecification.new(v) }
-      end
-
-      def config_spec_for(volume)
-        specs_from_config.find { |s| volume.mounted_at?(s.mount_point) }
-      end
-
-      def volumes_from_proposal(only_proposed: false)
-        all_specs = specs_from_proposal
-        specs = only_proposed ? all_specs.select(&:proposed?) : all_specs
-
-        specs.map do |spec|
-          Volume.new(spec).tap do |volume|
-            volume.assign_size_relevant_volumes(all_specs)
-            volume.encrypted = proposal.settings.use_encryption
-            planned = planned_device_for(volume)
-            if planned
-              volume.device_type = planned.respond_to?(:lv_type) ? :logical_volume : :partition
-              volume.min_size = planned.min
-              volume.max_size = planned.max
-            end
-          end
-        end
       end
 
       def specs_from_proposal
@@ -203,23 +181,15 @@ module DInstaller
         proposal.settings.volumes
       end
 
-      def planned_device_for(volume)
-        return nil unless proposal
-
-        proposal.planned_devices.find do |device|
-          device.respond_to?(:mount_point) && volume.mounted_at?(device.mount_point)
-        end
+      def config_spec_for(volume)
+        specs_from_config.find { |s| volume.mounted_at?(s.mount_point) }
       end
 
-      def calculate_y2storage_settings
-        return nil unless settings
-
-        Y2Storage::ProposalSettings.new_for_current_product.tap do |proposal_settings|
-          proposal_settings.use_lvm = settings.use_lvm?
-          proposal_settings.encryption_password = settings.encryption_password
-          proposal_settings.candidate_devices = settings.candidate_devices
-          proposal_settings.volumes = settings.volumes.map(&:spec)
-        end
+      def to_y2storage_settings(settings)
+        generator = ProposalSettingsGenerator.new(settings,
+          default_volume_specs: specs_from_config,
+          available_devices:    available_devices)
+        generator.proposal_settings
       end
 
       # @return [Y2Storage::DiskAnalyzer]
@@ -243,6 +213,98 @@ module DInstaller
 
       def storage_manager
         Y2Storage::StorageManager.instance
+      end
+
+      class VolumesGenerator
+        def initialize(specs, planned_devices: [])
+          @specs = specs
+          @plannend_devices = planned_devices
+        end
+
+        def volumes(only_proposed: false)
+          specs = self.specs
+          specs = specs.select(&:proposed?) if only_proposed
+
+          specs.map do |spec|
+            Volume.new(spec).tap do |volume|
+              volume.assign_size_relevant_volumes(self.specs)
+              planned = planned_device_for(volume)
+              if planned
+                volume.device_type = planned.respond_to?(:lv_type) ? :logical_volume : :partition
+                volume.min_size = planned.min
+                volume.max_size = planned.max
+              end
+            end
+          end
+        end
+
+        private
+
+        attr_reader :specs
+
+        attr_reader :planned_devices
+
+        def planned_device_for(volume)
+          return nil if planned_devices.none?
+
+          planned_devices.find do |device|
+            device.respond_to?(:mount_point) && volume.mounted_at?(device.mount_point)
+          end
+        end
+      end
+
+      class ProposalSettingsGenerator
+        def initialize(settings, default_volume_specs: [], available_devices: [])
+          @settings = settings
+          @default_volume_specs = default_volume_specs
+          @available_devices = available_devices
+        end
+
+        def proposal_settings
+          return @proposal_settings if @proposal_settings
+
+          @proposal_settings = Y2Storage::ProposalSettings.new_for_current_product
+          @proposal_settings.use_lvm = settings.use_lvm?
+          @proposal_settings.encryption_password = settings.encryption_password
+          @proposal_settings.candidate_devices = calculate_candidate_devices
+          @proposal_settings.volumes = calculate_volume_specs
+
+          @proposal_settings
+        end
+
+        private
+
+        attr_reader :settings
+
+        attr_reader :default_volume_specs
+
+        attr_reader :available_devices
+
+        def calculate_candidate_devices
+          # FIXME
+          return ["/dev/vdc"]
+
+          candidate_devices = settings.candidate_devices
+
+          if candidate_devices.none?
+            # TODO: smart selection for the default disk
+            candidate_devices = [available_devices.first&.name].compact
+          end
+
+          candidate_devices
+        end
+
+        def calculate_volume_specs
+          settings.volumes.map(&:spec) + missing_volume_specs.map { |s| s.proposed = false }
+        end
+
+        def missing_volume_specs
+          default_volume_specs.select { |s| missing_volume_spec?(s) }
+        end
+
+        def missing_volume_spec?(spec)
+          settings.volumes.none? { |v| v.mounted_at?(spec.mount_point) }
+        end
       end
     end
   end

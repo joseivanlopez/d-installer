@@ -23,7 +23,7 @@ require "dbus"
 require "dinstaller/dbus/base_object"
 require "dinstaller/dbus/with_service_status"
 require "dinstaller/dbus/interfaces/service_status"
-require "dinstaller/storage/proposal_settings"
+require "dinstaller/storage/volume"
 
 module DInstaller
   module DBus
@@ -93,6 +93,10 @@ module DInstaller
           end
         end
 
+        def volume_templates
+          backend.volume_templates.map { |v| to_dbus_volume(v) }
+        end
+
         # @see DInstaller::Storage::Proposal
         def lvm
           return false unless backend.settings
@@ -114,7 +118,7 @@ module DInstaller
         end
 
         def volumes
-          backend.volumes.map { |v| to_dbus_volume(v) }
+          backend.calculated_volumes.map { |v| to_dbus_volume(v) }
         end
 
         # List of sorted actions in D-Bus format
@@ -146,7 +150,7 @@ module DInstaller
         #
         # @param settings [Hash]
         def to_proposal_settings(dbus_settings)
-          ProposalSettings.new.tap do |proposal_settings|
+          backend.default_settings.tap do |proposal_settings|
             dbus_settings.each do |dbus_property, dbus_value|
               setter, value = case dbus_property
                 when "CandidateDevices"
@@ -165,30 +169,33 @@ module DInstaller
         end
 
         def to_proposal_volume(dbus_volume)
-          Volume.new.tap do |volume|
-            dbus_volume.each do |dbus_property, dbus_value|
-              setter, value = case dbus_property
-                when "DeviceType"
-                  ["device_type=", dbus_value.to_sym]
-                when "Encrypted"
-                  ["encrypted=", dbus_value]
-                when "MountPoint"
-                  ["mount_point=", dbus_value]
-                when "FixedSizeLimits"
-                  ["fixed_size_limits=", dbus_value]
-                when "MinSize"
-                  ["min_size=", Y2Storage::DiskSize.new(dbus_value)]
-                when "MaxSize"
-                  ["max_size=", Y2Storage::DiskSize.new(dbus_value)]
-                when "FSType"
-                  ["fs_type=", to_fs_type(dbus_value)]
-                when "Snapshots"
-                  ["snapshots=", dbus_value]
-                end
+          volume = volume_templates.find { |v| v.mounted_at?(dbus_volume["MountPoint"]) }
+          volume ||= DInstaller::Storage::Volume.new
 
-              volume.public_send(setter, value)
-            end
+          dbus_volume.each do |dbus_property, dbus_value|
+            setter, value = case dbus_property
+              when "DeviceType"
+                ["device_type=", dbus_value.to_sym]
+              when "Encrypted"
+                ["encrypted=", dbus_value]
+              when "MountPoint"
+                ["mount_point=", dbus_value]
+              when "FixedSizeLimits"
+                ["fixed_size_limits=", dbus_value]
+              when "MinSize"
+                ["min_size=", Y2Storage::DiskSize.new(dbus_value)]
+              when "MaxSize"
+                ["max_size=", Y2Storage::DiskSize.new(dbus_value)]
+              when "FSType"
+                ["fs_type=", to_fs_type(dbus_value)]
+              when "Snapshots"
+                ["snapshots=", dbus_value]
+              end
+
+            volume.public_send(setter, value)
           end
+
+          volume
         end
 
         def to_fs_type(dbus_fs_type)
