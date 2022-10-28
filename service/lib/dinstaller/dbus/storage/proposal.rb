@@ -169,7 +169,7 @@ module DInstaller
         end
 
         def to_proposal_volume(dbus_volume)
-          volume = volume_templates.find { |v| v.mounted_at?(dbus_volume["MountPoint"]) }
+          volume = backend.volume_templates.find { |v| v.mounted_at?(dbus_volume["MountPoint"]) }
           volume ||= DInstaller::Storage::Volume.new
 
           dbus_volume.each do |dbus_property, dbus_value|
@@ -186,7 +186,7 @@ module DInstaller
                 ["min_size=", Y2Storage::DiskSize.new(dbus_value)]
               when "MaxSize"
                 ["max_size=", Y2Storage::DiskSize.new(dbus_value)]
-              when "FSType"
+              when "FsType"
                 ["fs_type=", to_fs_type(dbus_value)]
               when "Snapshots"
                 ["snapshots=", dbus_value]

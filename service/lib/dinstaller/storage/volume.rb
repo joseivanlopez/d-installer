@@ -21,7 +21,9 @@
 
 require "forwardable"
 require "pathname"
-require "y2storage/volume_specification"
+# FIXME
+# require "y2storage/volume_specification"
+require "y2storage"
 
 module DInstaller
   module Storage
@@ -57,7 +59,7 @@ module DInstaller
       def_delegator :@spec, :snapshots_configurable?
 
       def initialize(spec = nil)
-        @spec = spec ? spec.dup : Y2Storage::VolumeSpecification.new
+        @spec = spec ? spec.dup : Y2Storage::VolumeSpecification.new({})
         @spec.proposed = true
         @spec.proposed_configurable = false
 

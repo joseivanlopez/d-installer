@@ -218,7 +218,7 @@ module DInstaller
       class VolumesGenerator
         def initialize(specs, planned_devices: [])
           @specs = specs
-          @plannend_devices = planned_devices
+          @planned_devices = planned_devices
         end
 
         def volumes(only_proposed: false)
@@ -281,9 +281,6 @@ module DInstaller
         attr_reader :available_devices
 
         def calculate_candidate_devices
-          # FIXME
-          return ["/dev/vdc"]
-
           candidate_devices = settings.candidate_devices
 
           if candidate_devices.none?
@@ -295,7 +292,10 @@ module DInstaller
         end
 
         def calculate_volume_specs
-          settings.volumes.map(&:spec) + missing_volume_specs.map { |s| s.proposed = false }
+          missing_specs = missing_volume_specs
+          missing_specs.map { |s| s.proposed = false }
+
+          settings.volumes.map(&:spec) + missing_specs
         end
 
         def missing_volume_specs
