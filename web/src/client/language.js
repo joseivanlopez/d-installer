@@ -40,7 +40,20 @@ class LanguageClient {
    * @param {string|undefined} address - D-Bus address; if it is undefined, it uses the system bus.
    */
   constructor(address = undefined) {
-    this.client = new DBusClient(LANGUAGE_SERVICE, address);
+    this.address = address;
+    // this.client = new DBusClient(LANGUAGE_SERVICE, address);
+  }
+
+  /**
+   * @return {DBusClient} client
+   */
+  client() {
+    // return this.assigned_client;
+    if (!this._client) {
+      this._client = new DBusClient(LANGUAGE_SERVICE, this.address);
+    }
+
+    return this._client;
   }
 
   /**
@@ -49,7 +62,7 @@ class LanguageClient {
    * @return {Promise<Array<Language>>}
    */
   async getLanguages() {
-    const proxy = await this.client.proxy(LANGUAGE_IFACE);
+    const proxy = await this.client().proxy(LANGUAGE_IFACE);
     const locales = proxy.SupportedLocales;
     const labels = await proxy.LabelsForLocales();
     return locales.map((locale, index) => {
@@ -65,7 +78,7 @@ class LanguageClient {
    * @return {Promise<Array<String>>} IDs of the selected languages
    */
   async getSelectedLanguages() {
-    const proxy = await this.client.proxy(LANGUAGE_IFACE);
+    const proxy = await this.client().proxy(LANGUAGE_IFACE);
     return proxy.Locales;
   }
 
@@ -76,7 +89,7 @@ class LanguageClient {
    * @return {Promise<void>}
    */
   async setLanguages(langIDs) {
-    const proxy = await this.client.proxy(LANGUAGE_IFACE);
+    const proxy = await this.client().proxy(LANGUAGE_IFACE);
     proxy.Locales = langIDs;
   }
 
@@ -87,7 +100,7 @@ class LanguageClient {
    * @return {import ("./dbus").RemoveFn} function to disable the callback
    */
   onLanguageChange(handler) {
-    return this.client.onObjectChanged(LANGUAGE_PATH, LANGUAGE_IFACE, changes => {
+    return this.client().onObjectChanged(LANGUAGE_PATH, LANGUAGE_IFACE, changes => {
       const selected = changes.Locales.v[0];
       handler(selected);
     });
