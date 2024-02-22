@@ -29,9 +29,12 @@ module Agama
       class FromY2Storage
         # @param settings [Y2Storage::ProposalSettings]
         # @param config [Agama::Config]
-        def initialize(settings, config:)
+        # @param backup [Agama::Storage::ProposalSettings] Settings used as backup to restore some
+        #   values, see {FromY2Storage#restore_from_backup}.
+        def initialize(settings, config:, backup: nil)
           @settings = settings
           @config = config
+          @backup = backup
         end
 
         # Performs the conversion from Y2Storage format.
@@ -39,10 +42,10 @@ module Agama
         # @return [Agama::Storage::ProposalSettings]
         def convert
           ProposalSettings.new.tap do |target|
-            boot_device_conversion(target)
+            restore_from_backup(target)
             lvm_conversion(target)
             encryption_conversion(target)
-            space_settings_conversion(target)
+            space_actions_conversion(target)
             volumes_conversion(target)
           end
         end
@@ -55,24 +58,36 @@ module Agama
         # @return [Agama::Config]
         attr_reader :config
 
-        # @param target [Agama::Storage::ProposalSettings]
-        def boot_device_conversion(target)
-          target.boot_device = settings.root_device
+        # @return [Agama::Storage::ProposalSettings, nil]
+        attr_reader :backup
+
+        # Restores values from a backup.
+        #
+        # @note Some values cannot be inferred from Y2Storage settings:
+        #   * #default_device: if boot_device was set to a specific device, then the root_device from
+        #   Y2Storage does not represent the default device.
+        #   * #boot_device: it is not possible to know whether the Y2Storage root_device setting comes
+        #   from a specific boot device or the default device.
+        #   * #lvm.system_vg_devices: it is not possible to know whether the Y2Storage
+        #   candidate_devices setting comes from a specific list of devices or the default device.
+        #   * #space.policy: Y2Storage does not manage a space policy, and it is impossible to infer
+        #   a policy from the list of space actions.
+        #
+        #   All these values have to be restored from a settings backup.
+        #
+        # @return [Y2Storage::ProposalSettings]
+        def restore_from_backup(target)
+          return unless backup
+
+          target.default_device = backup.default_device
+          target.boot_device = backup.boot_device
+          target.lvm.system_vg_devices = backup.lvm.system_vg_devices
+          target.space.policy = backup.space.policy
         end
 
         # @param target [Agama::Storage::ProposalSettings]
         def lvm_conversion(target)
           target.lvm.enabled = settings.lvm
-
-          # FIXME: The candidate devices list represents the system VG devices if it contains any
-          #   device different to the root device. If the candidate devices only contains the root
-          #   device, then there is no way to know whether the root device was explicitly assigned
-          #   as system VG device. Note that candidate devices will also contain the root device
-          #   when the system VG devices list was empty.
-          candidate_devices = settings.candidate_devices || []
-          return unless candidate_devices.reject { |d| d == settings.root_device }.any?
-
-          target.lvm.system_vg_devices = settings.candidate_devices
         end
 
         # @param target [Agama::Storage::ProposalSettings]
@@ -82,16 +97,15 @@ module Agama
           target.encryption.pbkd_function = settings.encryption_pbkdf
         end
 
-        # @note The space policy cannot be inferred from Y2Storage settings.
         # @param target [Agama::Storage::ProposalSettings]
-        def space_settings_conversion(target)
+        def space_actions_conversion(target)
           target.space.actions = settings.space_settings.actions
         end
 
         # @param target [Agama::Storage::ProposalSettings]
         def volumes_conversion(target)
           target.volumes = volumes.select(&:proposed?).map do |spec|
-            VolumeConversion.from_y2storage(spec, config: config)
+            VolumeConversion.from_y2storage(spec, config: config, backup: backup)
           end
 
           fallbacks_conversion(target)

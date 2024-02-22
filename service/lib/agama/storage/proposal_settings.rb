@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Copyright (c) [2022-2023] SUSE LLC
+# Copyright (c) [2022-2024] SUSE LLC
 #
 # All Rights Reserved.
 #
@@ -42,11 +42,24 @@ module Agama
       # @return [SpaceSettings]
       attr_reader :space
 
-      # Device name of the disk that will be used for booting the system and also to allocate all
-      # the partitions, except those that have been explicitly assigned to other disk(s).
+      # Device name of the device that will be used by default to allocate all the partitions. This
+      # is the default location for everything (i.e., boot partitions, LVM  PVs and volumes
+      # location) if nothing else is indicated.
       #
       # @return [String, nil] nil if no device has been selected yet.
+      attr_accessor :default_device
+
+      # Device name of the device that will be used to allocate the partitions required for booting.
+      # If no device is indicated, then the {#default_device} will be used.
+      #
+      # @return [String, nil]
       attr_accessor :boot_device
+
+      # Whether the proposal should create the partitions required for booting. If false, then the
+      # {#boot_device} is ignored.
+      #
+      # @return [Boolean]
+      attr_accessor :propose_boot
 
       # Set of volumes to create
       #

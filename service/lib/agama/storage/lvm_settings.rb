@@ -29,7 +29,9 @@ module Agama
       attr_accessor :enabled
       alias_method :enabled?, :enabled
 
-      # Devices to use for the system LVM volume group
+      # Devices to use for the system LVM volume group.
+      #
+      # If no devices are indicated, then the {ProposalSettings#default_device} will be used.
       #
       # @return [Array<String>]
       attr_accessor :system_vg_devices

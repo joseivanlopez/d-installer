@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Copyright (c) [2023] SUSE LLC
+# Copyright (c) [2023-2024] SUSE LLC
 #
 # All Rights Reserved.
 #
@@ -43,7 +43,7 @@ module Agama
           # generic default values that are independent of the product (there is no YaST
           # ProductFeatures mechanism in place).
           Y2Storage::ProposalSettings.new_for_current_product.tap do |target|
-            boot_device_conversion(target)
+            root_device_conversion(target)
             candidate_devices_conversion(target)
             lvm_conversion(target)
             encryption_conversion(target)
@@ -61,21 +61,13 @@ module Agama
         attr_reader :config
 
         # @param target [Y2Storage::ProposalSettings]
-        def boot_device_conversion(target)
-          target.root_device = settings.boot_device
+        def root_device_conversion(target)
+          target.root_device = boot_device
         end
 
         # @param target [Y2Storage::ProposalSettings]
         def candidate_devices_conversion(target)
-          candidate_devices = []
-
-          if settings.lvm.enabled? && settings.lvm.system_vg_devices.any?
-            candidate_devices = settings.lvm.system_vg_devices
-          elsif settings.boot_device
-            candidate_devices = [settings.boot_device]
-          end
-
-          target.candidate_devices = candidate_devices
+          target.candidate_devices = settings.lvm.enabled? ? system_vg_devices : [boot_device]
         end
 
         # @param target [Y2Storage::ProposalSettings]
@@ -86,6 +78,8 @@ module Agama
           target.separate_vgs = lvm
           # Prevent VG reuse
           target.lvm_vg_reuse = false
+          # Create VG as big as needed to allocate the LVs.
+          target.lvm_vg_strategy = :use_needed
         end
 
         # @param target [Y2Storage::ProposalSettings]
@@ -118,12 +112,14 @@ module Agama
           target.swap_reuse = :none
 
           volumes = settings.volumes.map { |v| VolumeConversion.to_y2storage(v) }
+
           disabled_volumes = missing_volumes.map do |volume|
             VolumeConversion.to_y2storage(volume).tap { |v| v.proposed = false }
           end
 
           target.volumes = volumes + disabled_volumes
 
+          device_conversion(target)
           fallbacks_conversion(target)
         end
 
@@ -134,6 +130,13 @@ module Agama
           VolumeTemplatesBuilder.new_from_config(config).all
             .reject { |t| mount_paths.include?(t.mount_path) }
             .reject { |t| t.mount_path.empty? }
+        end
+
+        # @param target [Y2Storage::ProposalSettings]
+        def device_conversion(taget)
+          target.volumes.each do |spec|
+            spec.device ||= settings.default_device if spec.proposed?
+          end
         end
 
         # @param target [Y2Storage::ProposalSettings]
@@ -158,6 +161,15 @@ module Agama
         def find_max_size_fallback(mount_path)
           volume = settings.volumes.find { |v| v.max_size_fallback_for.include?(mount_path) }
           volume&.mount_path
+        end
+
+        def boot_device
+          settings.boot_device || settings.default_device
+        end
+
+        def system_vg_devices
+          lvm_devices = settings.lvm.system_vg_devices
+          lvm_devices.any? ? lvm_devices : [settings.default_device]
         end
 
         # All block devices affected by the space policy.
