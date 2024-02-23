@@ -67,15 +67,14 @@ module Agama
 
         # @param target [Y2Storage::ProposalSettings]
         def candidate_devices_conversion(target)
-          target.candidate_devices = settings.lvm.enabled? ? system_vg_devices : [boot_device]
+          candidates = lvm? ? system_vg_devices : [boot_device]
+          target.candidate_devices = candidates.compact
         end
 
         # @param target [Y2Storage::ProposalSettings]
         def lvm_conversion(target)
-          lvm = settings.lvm.enabled?
-
-          target.lvm = lvm
-          target.separate_vgs = lvm
+          target.lvm = lvm?
+          target.separate_vgs = lvm?
           # Prevent VG reuse
           target.lvm_vg_reuse = false
           # Create VG as big as needed to allocate the LVs.
@@ -163,25 +162,38 @@ module Agama
           volume&.mount_path
         end
 
-        def boot_device
-          settings.boot_device || settings.default_device
+        # TODO Returns true if reusing a LVM VG (i.e., default_device is a VG).
+        def lvm?
+          settings.lvm.enabled?
         end
 
+        def boot_device
+          return settings.boot_device if settings.boot_device
+          return settings.default_device unless lvm?
+          # In case of LVM, no default boot device is given, delegating to Y2Storage the
+          # responsibility of selecting a device.
+          nil
+        end
+
+        # TODO Returns empty list if reusing a LVM VG (i.e., default_device is a VG).
         def system_vg_devices
+          return [] unless lvm?
+
           lvm_devices = settings.lvm.system_vg_devices
           lvm_devices.any? ? lvm_devices : [settings.default_device]
         end
 
         # All block devices affected by the space policy.
         #
-        # This includes the partitions from the boot device, the candidate devices and from the
-        # devices directly assigned to a volume as target device. If a device is not partitioned,
-        # then the device itself is included.
+        # The affected devices are: the boot device, the devices for the system VG (in case of using
+        # LVM) and the devices directly assigned to a volume as target device.
+        #
+        # If a device is partitioned, then its partitions are included instead of the device.
         #
         # @return [Array<String>]
         def all_devices
-          devices = [settings.boot_device] +
-            settings.lvm.system_vg_devices +
+          devices = [boot_device] +
+            system_vg_devices +
             settings.volumes.map(&:device)
 
           devices.compact.uniq.map { |d| device_or_partitions(d) }.flatten

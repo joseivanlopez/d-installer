@@ -43,6 +43,7 @@ module Agama
         def convert
           ProposalSettings.new.tap do |target|
             restore_from_backup(target)
+            default_device_conversion(target)
             lvm_conversion(target)
             encryption_conversion(target)
             space_actions_conversion(target)
@@ -64,10 +65,10 @@ module Agama
         # Restores values from a backup.
         #
         # @note Some values cannot be inferred from Y2Storage settings:
-        #   * #default_device: if boot_device was set to a specific device, then the root_device from
-        #   Y2Storage does not represent the default device.
-        #   * #boot_device: it is not possible to know whether the Y2Storage root_device setting comes
-        #   from a specific boot device or the default device.
+        #   * #default_device: if boot_device was set to a specific device, then the root_device
+        #   from Y2Storage does not represent the default device.
+        #   * #boot_device: it is not possible to know whether the Y2Storage root_device setting
+        #   comes from a specific boot device or the default device.
         #   * #lvm.system_vg_devices: it is not possible to know whether the Y2Storage
         #   candidate_devices setting comes from a specific list of devices or the default device.
         #   * #space.policy: Y2Storage does not manage a space policy, and it is impossible to infer
@@ -83,6 +84,16 @@ module Agama
           target.boot_device = backup.boot_device
           target.lvm.system_vg_devices = backup.lvm.system_vg_devices
           target.space.policy = backup.space.policy
+        end
+
+        # @param target [Agama::Storage::ProposalSettings]
+        def default_device_conversion(target)
+          # With LVM, no default boot device is used, delegating to Y2Storage the selection of the
+          # root device. In that case, it is needed to recover the root device selected by Y2Storage
+          # as the new default device.
+          undefined_boot = backup.nil? || backup.boot_device.nil?
+
+          target.default_device = settings.root_device if settings.lvm? && undefined_boot
         end
 
         # @param target [Agama::Storage::ProposalSettings]
