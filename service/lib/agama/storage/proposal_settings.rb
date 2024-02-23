@@ -42,15 +42,16 @@ module Agama
       # @return [SpaceSettings]
       attr_reader :space
 
-      # Device name of the device that will be used by default to allocate all the partitions. This
-      # is the default location for everything (i.e., boot partitions, LVM  PVs and volumes
-      # location) if nothing else is indicated.
+      # Device name of the device that will be used to allocate the partitions. This is the default
+      # location for boot partitions if no specific device is selected for booting. If using LVM,
+      # the PVs for the system VG are not created in this device. In that case
+      # {LvmSettings#system_vg_devices} are used instead.
       #
       # @return [String, nil] nil if no device has been selected yet.
-      attr_accessor :default_device
+      attr_accessor :target_device
 
       # Device name of the device that will be used to allocate the partitions required for booting.
-      # If no device is indicated, then the {#default_device} will be used.
+      # If no device is indicated, then the {#target_device} will be used.
       #
       # @return [String, nil]
       attr_accessor :boot_device
@@ -71,6 +72,14 @@ module Agama
         @encryption = EncryptionSettings.new
         @space = SpaceSettings.new
         @volumes = []
+      end
+
+      # Whether the settings are configured to use LVM either by creating a new VG or by reusing an
+      # existing one.
+      #
+      # @return [Boolean]
+      def use_lvm?
+        lvm.enabled? || !lvm.reused_vg.nil?
       end
     end
   end

@@ -68,15 +68,15 @@ module Agama
         #
         # @note The device from the Y2Storage volume specification cannot always be directly
         #   assigned to the volume. It is not possible to know whether a specific device was set to
-        #   the volume or whether the default volume was used. The default volume is set as device
-        #   to the volume if the volume does not speficy any device and LVN is not used.
+        #   the volume or whether the default volume was used. The target volume is set as device
+        #   to the volume if the volume does not speficy any device and LVM is not used.
         #
         # @param target [Agama::Storage::Volume]
         def device_conversion(target)
           target.device = spec.device
           return unless backup
 
-          target.device = backup.device unless backup.lvm.enabled?
+          target.device = backup.device unless backup.use_lvm?
         end
 
         # @param target [Agama::Storage::Volume]

@@ -67,14 +67,14 @@ module Agama
 
         # @param target [Y2Storage::ProposalSettings]
         def candidate_devices_conversion(target)
-          candidates = lvm? ? system_vg_devices : [boot_device]
+          candidates = settings.use_lvm? ? system_vg_devices : [boot_device]
           target.candidate_devices = candidates.compact
         end
 
         # @param target [Y2Storage::ProposalSettings]
         def lvm_conversion(target)
-          target.lvm = lvm?
-          target.separate_vgs = lvm?
+          target.lvm = settings.use_lvm?
+          target.separate_vgs = settings.use_lvm?
           # Prevent VG reuse
           target.lvm_vg_reuse = false
           # Create VG as big as needed to allocate the LVs.
@@ -131,11 +131,16 @@ module Agama
             .reject { |t| t.mount_path.empty? }
         end
 
+        # Assigns the target device if needed.
+        #
+        # If LVM is not used, then the volumes have to specify a device, using the target device by
+        # default if no device was directly assigned to the volume.
+        #
         # @param target [Y2Storage::ProposalSettings]
         def device_conversion(taget)
-          target.volumes.each do |spec|
-            spec.device ||= settings.default_device if spec.proposed?
-          end
+          return if settings.use_lvm?
+
+          target.volumes.select(&:proposed?).each { |v| v.device ||= settings.target_device }
         end
 
         # @param target [Y2Storage::ProposalSettings]
@@ -162,37 +167,38 @@ module Agama
           volume&.mount_path
         end
 
-        # TODO Returns true if reusing a LVM VG (i.e., default_device is a VG).
-        def lvm?
-          settings.lvm.enabled?
+        def target_device
+          # If using LVM, then the target device is ignored.
+          return nil if settings.use_lvm?
+
+          settings.target_device
         end
 
         def boot_device
-          return settings.boot_device if settings.boot_device
-          return settings.default_device unless lvm?
-          # In case of LVM, no default boot device is given, delegating to Y2Storage the
-          # responsibility of selecting a device.
-          nil
+          # In using LVM, no default boot device is given, delegating to Y2Storage the
+          # responsibility of selecting a device, see {#target_device}.
+          settings.boot_device || target_device
         end
 
-        # TODO Returns empty list if reusing a LVM VG (i.e., default_device is a VG).
         def system_vg_devices
-          return [] unless lvm?
+          return [] unless settings.use_lvm?
 
-          lvm_devices = settings.lvm.system_vg_devices
-          lvm_devices.any? ? lvm_devices : [settings.default_device]
+          settings.lvm.system_vg_devices
         end
 
         # All block devices affected by the space policy.
         #
-        # The affected devices are: the boot device, the devices for the system VG (in case of using
-        # LVM) and the devices directly assigned to a volume as target device.
+        # The affected devices are:
+        # * The target device if LVM is not used.
+        # * The boot device if any.
+        # * The devices for the system VG if LVM is used.
+        # * The devices directly assigned to a volume.
         #
         # If a device is partitioned, then its partitions are included instead of the device.
         #
         # @return [Array<String>]
         def all_devices
-          devices = [boot_device] +
+          devices = [target_device, boot_device] +
             system_vg_devices +
             settings.volumes.map(&:device)
 
