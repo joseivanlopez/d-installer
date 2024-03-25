@@ -33,12 +33,14 @@ import { If, ExpandableSelector, Tag } from "~/components/core";
  */
 
 const DeviceInfo = ({ device }) => {
-  if (!device.sid) return _("Unused space");
+  if (!device.sid) return;
 
   return <DeviceExtendedInfo device={device} />;
 };
 
 const DeviceContent = ({ device }) => {
+  if (!device.sid) return _("Unused space");
+
   const PTable = () => {
     if (device.partitionTable === undefined) return null;
 
