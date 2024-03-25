@@ -19,8 +19,6 @@
  * find current contact information at www.suse.com.
  */
 
-// @ts-check
-
 import React, { useState } from "react";
 import { sprintf } from "sprintf-js";
 import { _ } from "~/i18n";
