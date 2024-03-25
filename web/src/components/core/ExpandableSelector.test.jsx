@@ -310,8 +310,8 @@ describe("ExpandableSelector", () => {
           const sda2Row = within(table).getByRole("row", { name: /dev\/sda2/ });
           const lv1Row = within(table).getByRole("row", { name: /lv1/ });
           expect(within(sda1Row).queryAllByRole("radio")).toEqual([]);
-          expect(within(sda1Row).queryAllByRole("radio")).toEqual([]);
-          expect(within(sda1Row).queryAllByRole("radio")).toEqual([]);
+          expect(within(sda2Row).queryAllByRole("radio")).toEqual([]);
+          expect(within(lv1Row).queryAllByRole("radio")).toEqual([]);
         });
       });
 
@@ -398,8 +398,8 @@ describe("ExpandableSelector", () => {
         const sda2Row = within(table).getByRole("row", { name: /dev\/sda2/ });
         const lv1Row = within(table).getByRole("row", { name: /lv1/ });
         expect(within(sda1Row).queryAllByRole("checkbox")).toEqual([]);
-        expect(within(sda1Row).queryAllByRole("checkbox")).toEqual([]);
-        expect(within(sda1Row).queryAllByRole("checkbox")).toEqual([]);
+        expect(within(sda2Row).queryAllByRole("checkbox")).toEqual([]);
+        expect(within(lv1Row).queryAllByRole("checkbox")).toEqual([]);
       });
     });
 
