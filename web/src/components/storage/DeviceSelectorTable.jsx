@@ -94,9 +94,9 @@ const DeviceContent = ({ device }) => {
 };
 
 const deviceColumns = [
-  { name: _("Device"), value: (item) => <DeviceInfo device={item} /> },
-  { name: _("Content"), value: (item) => <DeviceContent device={item} /> },
-  { name: _("Size"), value: (item) => deviceSize(item.size) }
+  { name: _("Device"), value: (device) => <DeviceInfo device={device} /> },
+  { name: _("Content"), value: (device) => <DeviceContent device={device} /> },
+  { name: _("Size"), value: (device) => deviceSize(device.size), classNames: "sizes-column" }
 ];
 
 export default function DeviceSelectorTable({ devices, selected, ...props }) {
@@ -105,7 +105,13 @@ export default function DeviceSelectorTable({ devices, selected, ...props }) {
       columns={deviceColumns}
       items={devices}
       itemIdKey="sid"
+      itemClassNames={(device) => {
+        if (!device.sid) {
+          return "dimmed-row";
+        }
+      }}
       itemsSelected={selected}
+      className="devices-table"
       {...props}
     />
   );

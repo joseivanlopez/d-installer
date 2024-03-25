@@ -39,9 +39,10 @@ import { Table, Thead, Tr, Th, Tbody, Td, ExpandableRowContent, RowSelectVariant
 
 /**
  * @typedef {object} ExpandableSelectorColumn
- * @property {string} name - The column header text
- * @property {(object) => JSX.Element} value - A function receiving
+ * @property {string} name - The column header text.
+ * @property {(object) => React.ReactNode} value - A function receiving
  *   the item to work with and returning the column value.
+ * @property {string} [classNames] - space-separated list of additional CSS class names.
  */
 
 /**
@@ -55,7 +56,7 @@ const TableHeader = ({ columns }) => (
     <Tr>
       <Th />
       <Th />
-      { columns?.map((c, i) => <Th key={i}>{c.name}</Th>) }
+      { columns?.map((c, i) => <Th key={i} className={c.classNames}>{c.name}</Th>) }
     </Tr>
   </Thead>
 );
@@ -104,6 +105,7 @@ const sanitizeSelection = (selection, allowMultiple) => {
  * @param {string} [props.itemIdKey="id"] - The key for retrieving the item id.
  * @param {(item: object) => Array<object>} [props.itemChildren=() => []] - Lookup method to retrieve children from given item.
  * @param {(item: object) => boolean} [props.itemSelectable=() => true] - Whether an item will be selectable or not.
+ * @param {(item: object) => (string|undefined)} [props.itemClassNames=() => ""] - Callback that allows adding additional CSS class names to item row.
  * @param {object[]} [props.itemsSelected=[]] - Collection of selected items.
  * @param {string[]} [props.initialExpandedKeys=[]] - Ids of initially expanded items.
  * @param {(selection: Array<object>) => void} [props.onSelectionChange=noop] - Callback to be triggered when selection changes.
@@ -116,6 +118,7 @@ export default function ExpandableSelector({
   itemIdKey = "id",
   itemChildren = () => [],
   itemSelectable = () => true,
+  itemClassNames = () => "",
   itemsSelected = [],
   initialExpandedKeys = [],
   onSelectionChange,
@@ -164,11 +167,11 @@ export default function ExpandableSelector({
     };
 
     return (
-      <Tr key={rowIndex} isExpanded={isExpanded}>
+      <Tr key={rowIndex} isExpanded={isExpanded} className={itemClassNames(item)}>
         <Td />
         <Td select={itemSelectable(item) ? selectProps : undefined} />
         { columns?.map((column, index) => (
-          <Td key={index} dataLabel={column.name}>
+          <Td key={index} dataLabel={column.name} className={column.classNames}>
             <ExpandableRowContent>{column.value(item)}</ExpandableRowContent>
           </Td>
         ))}
@@ -209,11 +212,11 @@ export default function ExpandableSelector({
     // TODO: Add label to Tbody?
     return (
       <Tbody key={rowIndex} isExpanded={isItemExpanded(itemKey)}>
-        <Tr>
+        <Tr className={itemClassNames(item)}>
           <Td expand={expandProps} />
           <Td select={itemSelectable(item) ? selectProps : undefined} />
           { columns?.map((column, index) => (
-            <Td key={index} dataLabel={column.name}>
+            <Td key={index} dataLabel={column.name} className={column.classNames}>
               {column.value(item)}
             </Td>
           ))}
