@@ -76,7 +76,7 @@ const DeviceExtendedInfo = ({ device }) => {
   };
 
   const MDInfo = () => {
-    if (device.type !== "md") return null;
+    if (device.type !== "md" || !device.members) return null;
 
     const members = device.members.map(m => m.split("/").at(-1));
 
