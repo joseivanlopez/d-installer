@@ -34,7 +34,7 @@ export { default as DASDFormatProgress } from "./DASDFormatProgress";
 export { default as ZFCPPage } from "./ZFCPPage";
 export { default as ZFCPDiskForm } from "./ZFCPDiskForm";
 export { default as ISCSIPage } from "./ISCSIPage";
-export { DeviceList, DeviceSelector } from "./device-utils";
+export { DeviceList, DeviceSelector, DeviceExtendedInfo } from "./device-utils";
 export { default as VolumeForm } from "./VolumeForm";
 export { default as DeviceSelectionDialog } from "./DeviceSelectionDialog";
 export { default as DeviceSelectorTable } from "./DeviceSelectorTable";

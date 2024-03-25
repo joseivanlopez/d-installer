@@ -24,12 +24,19 @@ import { _ } from "~/i18n";
 import { sprintf } from "sprintf-js";
 import { deviceSize } from '~/components/storage/utils';
 import { Icon } from "~/components/layout";
+import { DeviceExtendedInfo } from "~/components/storage";
 import { If, ExpandableSelector, Tag } from "~/components/core";
 
 /**
  * @typedef {import ("~/client/storage").ProposalSettings} ProposalSettings
  * @typedef {import ("~/client/storage").StorageDevice} StorageDevice
  */
+
+const DeviceInfo = ({ device }) => {
+  if (!device.sid) return _("Unused space");
+
+  return <DeviceExtendedInfo device={device} />;
+};
 
 const DeviceContent = ({ device }) => {
   const PTable = () => {
@@ -67,8 +74,7 @@ const DeviceContent = ({ device }) => {
   };
 
   const Description = () => {
-    if (device.partitionTable) return null;
-    if (!device.sid) return _("Unused space");
+    if (!device.sid || device.partitionTable) return null;
 
     return <div>{device.description} <FilesystemLabel /></div>;
   };
@@ -88,7 +94,7 @@ const DeviceContent = ({ device }) => {
 };
 
 const deviceColumns = [
-  { name: _("Device"), value: (item) => item.name },
+  { name: _("Device"), value: (item) => <DeviceInfo device={item} /> },
   { name: _("Content"), value: (item) => <DeviceContent device={item} /> },
   { name: _("Size"), value: (item) => deviceSize(item.size) }
 ];

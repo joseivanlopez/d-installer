@@ -32,6 +32,88 @@ import { deviceSize } from "~/components/storage/utils";
  * @typedef {import ("~/client/storage").DeviceManager.StorageDevice} StorageDevice
  */
 
+const DeviceExtendedInfo = ({ device }) => {
+  const DeviceName = () => {
+    if (device.name === undefined) return null;
+
+    return <div>{device.name}</div>;
+  };
+
+  const DeviceType = () => {
+    let type;
+
+    switch (device.type) {
+      case "multipath": {
+        // TRANSLATORS: multipath device type
+        type = _("Multipath");
+        break;
+      }
+      case "dasd": {
+        // TRANSLATORS: %s is replaced by the device bus ID
+        type = sprintf(_("DASD %s"), device.busId);
+        break;
+      }
+      case "md": {
+        // TRANSLATORS: software RAID device, %s is replaced by the RAID level, e.g. RAID-1
+        type = sprintf(_("Software %s"), device.level.toUpperCase());
+        break;
+      }
+      case "disk": {
+        type = device.sdCard
+          ? _("SD Card")
+          // TRANSLATORS: %s is replaced by the device transport name, e.g. USB, SATA, SCSI...
+          : sprintf(_("Transport %s"), device.transport);
+      }
+    }
+
+    return <If condition={type} then={<div>{type}</div>} />;
+  };
+
+  const DeviceModel = () => {
+    if (!device.model || device.model === "") return null;
+
+    return <div>{device.model}</div>;
+  };
+
+  const MDInfo = () => {
+    if (device.type !== "md") return null;
+
+    const members = device.members.map(m => m.split("/").at(-1));
+
+    // TRANSLATORS: RAID details, %s is replaced by list of devices used by the array
+    return <div>{sprintf(_("Members: %s"), members.sort().join(", "))}</div>;
+  };
+
+  const RAIDInfo = () => {
+    if (device.type !== "raid") return null;
+
+    const devices = device.devices.map(m => m.split("/").at(-1));
+
+    // TRANSLATORS: RAID details, %s is replaced by list of devices used by the array
+    return <div>{sprintf(_("Devices: %s"), devices.sort().join(", "))}</div>;
+  };
+
+  const MultipathInfo = () => {
+    if (device.type !== "multipath") return null;
+
+    const wires = device.wires.map(m => m.split("/").at(-1));
+
+    // TRANSLATORS: multipath details, %s is replaced by list of connections used by the device
+    return <div>{sprintf(_("Wires: %s"), wires.sort().join(", "))}</div>;
+  };
+
+  return (
+    <div>
+      <DeviceName />
+      <DeviceType />
+      <DeviceModel />
+      <MDInfo />
+      <RAIDInfo />
+      <MultipathInfo />
+    </div>
+  );
+};
+
 /**
  * Content for a device item
  * @component
@@ -62,88 +144,6 @@ const DeviceItem = ({ device }) => {
       <div>
         <DeviceIcon />
         <DeviceSize />
-      </div>
-    );
-  };
-
-  const ExtendedInfo = () => {
-    const DeviceName = () => {
-      if (device.name === undefined) return null;
-
-      return <div>{device.name}</div>;
-    };
-
-    const DeviceType = () => {
-      let type;
-
-      switch (device.type) {
-        case "multipath": {
-          // TRANSLATORS: multipath device type
-          type = _("Multipath");
-          break;
-        }
-        case "dasd": {
-          // TRANSLATORS: %s is replaced by the device bus ID
-          type = sprintf(_("DASD %s"), device.busId);
-          break;
-        }
-        case "md": {
-          // TRANSLATORS: software RAID device, %s is replaced by the RAID level, e.g. RAID-1
-          type = sprintf(_("Software %s"), device.level.toUpperCase());
-          break;
-        }
-        case "disk": {
-          type = device.sdCard
-            ? _("SD Card")
-            // TRANSLATORS: %s is replaced by the device transport name, e.g. USB, SATA, SCSI...
-            : sprintf(_("Transport %s"), device.transport);
-        }
-      }
-
-      return <If condition={type} then={<div>{type}</div>} />;
-    };
-
-    const DeviceModel = () => {
-      if (!device.model || device.model === "") return null;
-
-      return <div>{device.model}</div>;
-    };
-
-    const MDInfo = () => {
-      if (device.type !== "md") return null;
-
-      const members = device.members.map(m => m.split("/").at(-1));
-
-      // TRANSLATORS: RAID details, %s is replaced by list of devices used by the array
-      return <div>{sprintf(_("Members: %s"), members.sort().join(", "))}</div>;
-    };
-
-    const RAIDInfo = () => {
-      if (device.type !== "raid") return null;
-
-      const devices = device.devices.map(m => m.split("/").at(-1));
-
-      // TRANSLATORS: RAID details, %s is replaced by list of devices used by the array
-      return <div>{sprintf(_("Devices: %s"), devices.sort().join(", "))}</div>;
-    };
-
-    const MultipathInfo = () => {
-      if (device.type !== "multipath") return null;
-
-      const wires = device.wires.map(m => m.split("/").at(-1));
-
-      // TRANSLATORS: multipath details, %s is replaced by list of connections used by the device
-      return <div>{sprintf(_("Wires: %s"), wires.sort().join(", "))}</div>;
-    };
-
-    return (
-      <div>
-        <DeviceName />
-        <DeviceType />
-        <DeviceModel />
-        <MDInfo />
-        <RAIDInfo />
-        <MultipathInfo />
       </div>
     );
   };
@@ -200,7 +200,7 @@ const DeviceItem = ({ device }) => {
   return (
     <div data-items-type="agama/storage-devices">
       <BasicInfo data-type="type-and-size" />
-      <ExtendedInfo />
+      <DeviceExtendedInfo />
       <ContentInfo />
     </div>
   );
@@ -266,4 +266,4 @@ const DeviceSelector = ({ devices, selected, isMultiple = false, onChange = noop
   );
 };
 
-export { DeviceList, DeviceSelector };
+export { DeviceList, DeviceSelector, DeviceExtendedInfo };
