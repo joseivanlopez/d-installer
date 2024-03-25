@@ -66,53 +66,6 @@ const sdb = {
   udevPaths: ["pci-0000:00-19"]
 };
 
-const vda = {
-  sid: "59",
-  type: "disk",
-  vendor: "Micron",
-  model: "Micron 1100 SATA",
-  driver: ["ahci", "mmcblk"],
-  bus: "IDE",
-  transport: "usb",
-  dellBOSS: false,
-  sdCard: true,
-  active: true,
-  name: "/dev/vda",
-  size: 1024,
-  systems: ["Windows", "openSUSE Leap 15.2"],
-  udevIds: ["ata-Micron_1100_SATA_512GB_12563", "scsi-0ATA_Micron_1100_SATA_512GB"],
-  udevPaths: ["pci-0000:00-12", "pci-0000:00-12-ata"],
-  partitionTable: { type: "gpt", partitions: [] }
-};
-
-const md0 = {
-  sid: "62",
-  type: "md",
-  level: "raid0",
-  uuid: "12345:abcde",
-  members: ["/dev/vdb"],
-  active: true,
-  name: "/dev/md0",
-  size: 2048,
-  systems: [],
-  udevIds: [],
-  udevPaths: []
-};
-
-const md1 = {
-  sid: "63",
-  type: "md",
-  level: "raid0",
-  uuid: "12345:abcde",
-  members: ["/dev/vdc"],
-  active: true,
-  name: "/dev/md1",
-  size: 4096,
-  systems: [],
-  udevIds: [],
-  udevPaths: []
-};
-
 const props = {
   settings: {
     target: "disk",
