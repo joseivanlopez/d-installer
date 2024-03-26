@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2022-2023] SUSE LLC
+ * Copyright (c) [2022-2024] SUSE LLC
  *
  * All Rights Reserved.
  *
@@ -37,6 +37,18 @@ import { _ } from "~/i18n";
  */
 const ProposalSummary = ({ proposal }) => {
   const { availableDevices = [], result = {} } = proposal;
+
+  if (result.settings?.target === "newLvmVg") {
+    return (
+      <span
+        dangerouslySetInnerHTML={{
+          // TRANSLATORS: The storage summary in the installation overview. Do not translate 'abbr'
+          // and 'title', they are part of the HTML markup.
+          __html: _("Install in a new <abbr title='Logical Volume Manager'>LVM</abbr> volume group")
+        }}
+      />
+    );
+  }
 
   const targetDevice = result.settings?.targetDevice;
   if (!targetDevice) return <Text>{_("No device selected yet")}</Text>;
