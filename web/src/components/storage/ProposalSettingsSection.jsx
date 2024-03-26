@@ -20,11 +20,11 @@
  */
 
 import React, { useEffect, useState } from "react";
-import { Checkbox, Form, Skeleton, Switch, Tooltip } from "@patternfly/react-core";
+import { Button, Checkbox, Form, Skeleton, Switch, Tooltip } from "@patternfly/react-core";
 
 import { _ } from "~/i18n";
+import { BootSelectionDialog, ProposalVolumes, ProposalSpacePolicyField } from "~/components/storage";
 import { If, PasswordAndConfirmationInput, Section, Popup } from "~/components/core";
-import { ProposalVolumes, ProposalSpacePolicyField } from "~/components/storage";
 import { Icon } from "~/components/layout";
 import { noop } from "~/utils";
 import { hasFS } from "~/components/storage/utils";
@@ -268,11 +268,77 @@ const EncryptionField = ({
 };
 
 /**
+ * Allows to select the boot config.
+ * @component
+ *
+ * @param {object} props
+ * @param {boolean} props.configureBoot
+ * @param {StorageDevice} props.bootDevice
+ * @param {StorageDevice[]} props.devices
+ * @param {boolean} props.isLoading
+ * @param {(boot: Boot) => void} props.onChange
+ *
+ * @typedef {object} Boot
+ * @property {boolean} configureBoot
+ * @property {StorageDevice} bootDevice
+ */
+const BootConfigField = ({
+  configureBoot,
+  bootDevice,
+  devices,
+  isLoading,
+  onChange
+}) => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const openDialog = () => setIsDialogOpen(true);
+
+  const closeDialog = () => setIsDialogOpen(false);
+
+  const onAccept = ({ configureBoot, bootDevice }) => {
+    closeDialog();
+    onChange({ configureBoot, bootDevice });
+  };
+
+  const label = () => {
+    if (configureBoot)
+      return _("If needed, additional partitions will be configured to boot the system");
+    else
+      return _("Additional partitions will not be configured to boot the system");
+  };
+
+  if (isLoading) {
+    return <Skeleton screenreaderText={_("Waiting for information about boot config")} width="25%" />;
+  }
+
+  return (
+    <div className="split">
+      <span>{label()}</span>
+      <Button variant="link" onClick={openDialog}>{_("change")}</Button>
+      <If
+        condition={isDialogOpen}
+        then={
+          <BootSelectionDialog
+            isOpen
+            configureBoot={configureBoot}
+            bootDevice={bootDevice}
+            devices={devices}
+            onAccept={onAccept}
+            onCancel={closeDialog}
+          />
+        }
+      />
+    </div>
+  );
+};
+
+/**
  * Section for editing the proposal settings
  * @component
  *
  * @param {object} props
  * @param {ProposalSettings} props.settings
+ * @param {StorageDevice[]} [props.availableDevices=[]]
  * @param {String[]} [props.encryptionMethods=[]]
  * @param {onChangeFn} [props.onChange=noop]
  *
@@ -281,6 +347,7 @@ const EncryptionField = ({
  */
 export default function ProposalSettingsSection({
   settings,
+  availableDevices = [],
   encryptionMethods = [],
   volumeTemplates = [],
   isLoading = false,
@@ -311,9 +378,18 @@ export default function ProposalSettingsSection({
     onChange({ spacePolicy: policy, spaceActions: actions });
   };
 
+  const changeBoot = ({ configureBoot, bootDevice }) => {
+    onChange({
+      configureBoot,
+      bootDevice: bootDevice?.name
+    });
+  };
+
   const encryption = settings.encryptionPassword !== undefined && settings.encryptionPassword.length > 0;
 
-  const { volumes = [] } = settings;
+  const { volumes = [], installationDevices = [] } = settings;
+
+  const bootDevice = availableDevices.find(d => d.name === settings.bootDevice);
 
   // Templates for already existing mount points are filtered out
   const usefulTemplates = () => {
@@ -345,10 +421,17 @@ export default function ProposalSettingsSection({
           isLoading={isLoading && settings.volumes === undefined}
           onChange={changeVolumes}
         />
+        <BootConfigField
+          configureBoot={settings.configureBoot}
+          bootDevice={bootDevice}
+          devices={availableDevices}
+          isLoading={isLoading}
+          onChange={changeBoot}
+        />
         <ProposalSpacePolicyField
           policy={settings.spacePolicy}
           actions={settings.spaceActions}
-          devices={settings.installationDevices}
+          devices={installationDevices}
           isLoading={isLoading}
           onChange={changeSpacePolicy}
         />
