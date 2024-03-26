@@ -25,12 +25,17 @@ import { sprintf } from "sprintf-js";
 import { _ } from "~/i18n";
 import { noop } from "~/utils";
 import { Icon } from "~/components/layout";
-import { If, Selector } from "~/components/core";
+import { If, Selector, Tag } from "~/components/core";
 import { deviceSize } from "~/components/storage/utils";
 
 /**
  * @typedef {import ("~/client/storage").DeviceManager.StorageDevice} StorageDevice
  */
+
+const FilesystemLabel = ({ device }) => {
+  const label = device.filesystem?.label;
+  if (label) return <Tag variant="gray-highlight"><b>{label}</b></Tag>;
+};
 
 const DeviceExtendedInfo = ({ device }) => {
   const DeviceName = () => {
@@ -114,6 +119,59 @@ const DeviceExtendedInfo = ({ device }) => {
   );
 };
 
+const DeviceContentInfo = ({ device }) => {
+  const PTable = () => {
+    if (device.partitionTable === undefined) return null;
+
+    const type = device.partitionTable.type.toUpperCase();
+    const numPartitions = device.partitionTable.partitions.length;
+
+    // TRANSLATORS: disk partition info, %s is replaced by partition table
+    // type (MS-DOS or GPT), %d is the number of the partitions
+    const text = sprintf(_("%s with %d partitions"), type, numPartitions);
+
+    return (
+      <div>
+        <Icon name="folder" size="14" /> {text}
+      </div>
+    );
+  };
+
+  const Systems = () => {
+    if (!device.systems || device.systems.length === 0) return null;
+
+    const System = ({ system }) => {
+      const logo = /windows/i.test(system) ? "windows_logo" : "linux_logo";
+
+      return <div><Icon name={logo} size="14" /> {system}</div>;
+    };
+
+    return device.systems.map((s, i) => <System key={i} system={s} />);
+  };
+
+  // TODO: there is a lot of room for improvement here, but first we would need
+  // device.description (comes from YaST) to be way more granular
+  const Description = () => {
+    if (device.partitionTable) return null;
+
+    if (!device.sid || (!!device.model && device.model === device.description)) {
+      // TRANSLATORS: status message, no existing content was found on the disk,
+      // i.e. the disk is completely empty
+      return <div><Icon name="folder_off" size="14" /> {_("No content found")}</div>;
+    }
+
+    return <div>{device.description} <FilesystemLabel device={device} /></div>;
+  };
+
+  return (
+    <div>
+      <PTable />
+      <Description />
+      <Systems />
+    </div>
+  );
+};
+
 /**
  * Content for a device item
  * @component
@@ -148,60 +206,11 @@ const DeviceItem = ({ device }) => {
     );
   };
 
-  const ContentInfo = () => {
-    const PTable = () => {
-      if (device.partitionTable === undefined) return null;
-
-      const type = device.partitionTable.type.toUpperCase();
-      const numPartitions = device.partitionTable.partitions.length;
-
-      // TRANSLATORS: disk partition info, %s is replaced by partition table
-      // type (MS-DOS or GPT), %d is the number of the partitions
-      const text = sprintf(_("%s with %d partitions"), type, numPartitions);
-
-      return (
-        <div>
-          <Icon name="folder" size="14" /> {text}
-        </div>
-      );
-    };
-
-    const Systems = () => {
-      if (device.systems.length === 0) return null;
-
-      const System = ({ system }) => {
-        const logo = /windows/i.test(system) ? "windows_logo" : "linux_logo";
-
-        return <div><Icon name={logo} size="14" /> {system}</div>;
-      };
-
-      return device.systems.map((s, i) => <System key={i} system={s} />);
-    };
-
-    const NotFound = () => {
-      // TRANSLATORS: status message, no existing content was found on the disk,
-      // i.e. the disk is completely empty
-      return <div><Icon name="folder_off" size="14" /> {_("No content found")}</div>;
-    };
-
-    const hasContent = device.partitionTable || device.systems.length > 0;
-
-    return (
-      <div>
-        <If
-          condition={hasContent}
-          then={<><PTable /><Systems /></>}
-          else={<NotFound />}
-        />
-      </div>
-    );
-  };
-
   return (
     <div data-items-type="agama/storage-devices">
       <BasicInfo data-type="type-and-size" />
-      <DeviceExtendedInfo />
-      <ContentInfo />
+      <DeviceExtendedInfo device={device} />
+      <DeviceContentInfo device={device} />
     </div>
   );
 };
@@ -266,4 +275,4 @@ const DeviceSelector = ({ devices, selected, isMultiple = false, onChange = noop
   );
 };
 
-export { DeviceList, DeviceSelector, DeviceExtendedInfo };
+export { DeviceList, DeviceSelector, DeviceContentInfo, DeviceExtendedInfo, FilesystemLabel };

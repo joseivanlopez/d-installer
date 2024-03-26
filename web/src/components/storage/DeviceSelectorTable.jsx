@@ -21,11 +21,9 @@
 
 import React from "react";
 import { _ } from "~/i18n";
-import { sprintf } from "sprintf-js";
 import { deviceSize } from '~/components/storage/utils';
-import { Icon } from "~/components/layout";
-import { DeviceExtendedInfo } from "~/components/storage";
-import { If, ExpandableSelector, Tag } from "~/components/core";
+import { DeviceExtendedInfo, DeviceContentInfo } from "~/components/storage";
+import { ExpandableSelector } from "~/components/core";
 
 /**
  * @typedef {import ("~/client/storage").ProposalSettings} ProposalSettings
@@ -33,71 +31,14 @@ import { If, ExpandableSelector, Tag } from "~/components/core";
  */
 
 const DeviceInfo = ({ device }) => {
-  if (!device.sid) return;
+  if (!device.sid) return _("Unused space");
 
   return <DeviceExtendedInfo device={device} />;
 };
 
-const DeviceContent = ({ device }) => {
-  if (!device.sid) return _("Unused space");
-
-  const PTable = () => {
-    if (device.partitionTable === undefined) return null;
-
-    const type = device.partitionTable.type.toUpperCase();
-    const numPartitions = device.partitionTable.partitions?.length;
-
-    // TRANSLATORS: disk partition info, %s is replaced by partition table
-    // type (MS-DOS or GPT), %d is the number of the partitions
-    const text = sprintf(_("%s with %d partitions"), type, numPartitions);
-
-    return (
-      <div>
-        <Icon name="folder" size="14" /> {text}
-      </div>
-    );
-  };
-
-  const FilesystemLabel = () => {
-    const label = device.filesystem?.label;
-    if (label) return <Tag variant="gray-highlight"><b>{label}</b></Tag>;
-  };
-
-  const Systems = () => {
-    if (device.systems.length === 0) return null;
-
-    const System = ({ system }) => {
-      const logo = /windows/i.test(system) ? "windows_logo" : "linux_logo";
-
-      return <div><Icon name={logo} size="14" /> {system} <FilesystemLabel /></div>;
-    };
-
-    return device.systems.map((s, i) => <System key={i} system={s} />);
-  };
-
-  const Description = () => {
-    if (!device.sid || device.partitionTable) return null;
-
-    return <div>{device.description} <FilesystemLabel /></div>;
-  };
-
-  const hasSystems = device.systems?.length > 0;
-
-  return (
-    <div>
-      <PTable />
-      <If
-        condition={hasSystems}
-        then={<Systems />}
-        else={<Description />}
-      />
-    </div>
-  );
-};
-
 const deviceColumns = [
   { name: _("Device"), value: (device) => <DeviceInfo device={device} /> },
-  { name: _("Content"), value: (device) => <DeviceContent device={device} /> },
+  { name: _("Content"), value: (device) => <DeviceContentInfo device={device} /> },
   { name: _("Size"), value: (device) => deviceSize(device.size), classNames: "sizes-column" }
 ];
 
