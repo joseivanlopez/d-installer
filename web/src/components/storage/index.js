@@ -39,3 +39,4 @@ export { default as VolumeForm } from "./VolumeForm";
 export { default as BootSelectionDialog } from "./BootSelectionDialog";
 export { default as DeviceSelectionDialog } from "./DeviceSelectionDialog";
 export { default as DeviceSelectorTable } from "./DeviceSelectorTable";
+export { default as DevicesFormSelect } from "./DevicesFormSelect";

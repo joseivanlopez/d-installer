@@ -21,12 +21,10 @@
 
 import React, { useState } from "react";
 import { Form } from "@patternfly/react-core";
-
 import { _ } from "~/i18n";
-import { deviceChildren } from "~/components/storage/utils";
-import { ControlledPanels as Panels, Popup } from "~/components/core";
-import { DeviceSelectorTable } from "~/components/storage";
 import { noop } from "~/utils";
+import { Popup } from "~/components/core";
+import { DevicesFormSelect } from "~/components/storage";
 
 /**
  * @typedef {import ("~/client/storage").StorageDevice} StorageDevice
@@ -35,27 +33,38 @@ import { noop } from "~/utils";
 const BOOT_AUTO_ID = "boot-auto";
 const BOOT_MANUAL_ID = "boot-manual";
 const BOOT_DISABLED_ID = "boot-disabled";
-const BOOT_AUTO_PANEL_ID = "panel-for-boot-auto";
-const BOOT_MANUAL_PANEL_ID = "panel-for-boot-manual";
-const BOOT_DISABLED_PANEL_ID = "panel-for-boot-disabled";
 const OPTIONS_NAME = "boot-mode";
+
+/**
+ * Internal component for building the options
+ * @component
+ *
+ * @param {React.PropsWithChildren<React.ComponentProps<"input">>} props
+ */
+const RadioOption = ({ id, onChange, defaultChecked, children }) => {
+  return (
+    <>
+      <input id={id} name={OPTIONS_NAME} type="radio" defaultChecked={defaultChecked} onChange={onChange} />
+      <label htmlFor={id}>{children}</label>
+    </>
+  );
+};
 
 /**
  * Renders a dialog that allows the user to select the boot configuration.
  * @component
  *
- * @param {object} props
- * @param {boolean} props.configureBoot
- * @param {StorageDevice|undefined} props.bootDevice
- * @param {StorageDevice[]} props.devices - The actions to perform in the system.
- * @param {boolean} [props.isOpen=false] - Whether the dialog is visible or not.
- * @param {function} [props.onCancel=noop] - Callback to execute when user closes the dialog.
- * @param {(boot: Boot) => void} props.onAccept
- *
  * @typedef {object} Boot
  * @property {boolean} configureBoot
  * @property {StorageDevice|undefined} bootDevice
-
+ *
+ * @param {object} props
+ * @param {boolean} props.configureBoot - Whether the boot is configurable
+ * @param {StorageDevice|undefined} props.bootDevice - Currently selected booting device.
+ * @param {StorageDevice[]} props.devices - Devices that user can select to boot from.
+ * @param {boolean} [props.isOpen=false] - Whether the dialog is visible or not.
+ * @param {function} [props.onCancel=noop] - Callback to execute when user closes the dialog.
+ * @param {(boot: Boot) => void} props.onAccept
  */
 export default function BootSelectionDialog({
   configureBoot: defaultConfigureBoot,
@@ -67,11 +76,10 @@ export default function BootSelectionDialog({
   ...props
 }) {
   const [configureBoot, setConfigureBoot] = useState(defaultConfigureBoot);
-  const [bootDevice, setBootDevice] = useState(defaultBootDevice);
+  const [bootDevice, setBootDevice] = useState(defaultBootDevice || devices[0]);
   const [isBootAuto, setIsBootAuto] = useState(defaultConfigureBoot && defaultBootDevice === undefined);
 
   const isBootManual = configureBoot && !isBootAuto;
-  const isBootDisabled = !configureBoot;
 
   const selectBootAuto = () => {
     setConfigureBoot(true);
@@ -88,8 +96,6 @@ export default function BootSelectionDialog({
     setIsBootAuto(false);
   };
 
-  const selectBootDevice = (devices) => setBootDevice(devices[0]);
-
   const onSubmit = (e) => {
     e.preventDefault();
     const device = isBootAuto ? undefined : bootDevice;
@@ -100,74 +106,58 @@ export default function BootSelectionDialog({
     return isBootManual && bootDevice === undefined;
   };
 
-  const isDeviceSelectable = (device) => device.isDrive || device.type === "md";
-
   return (
     <Popup
       title={_("Configuration for boot partitions")}
       isOpen={isOpen}
-      variant="medium"
+      className="large"
       {...props}
     >
       <Form id="boot-form" onSubmit={onSubmit}>
-        <Panels className="stack">
-          <Panels.Options data-variant="buttons">
-            <Panels.Option
-              id={BOOT_AUTO_ID}
-              name={OPTIONS_NAME}
-              isSelected={isBootAuto}
-              onChange={selectBootAuto}
-              controls={BOOT_AUTO_PANEL_ID}
-            >
+        <fieldset className="stack">
+          <legend className="split">
+            <RadioOption id={BOOT_AUTO_ID} defaultChecked={isBootAuto} onChange={() => selectBootAuto()}>
               {_("Automatic")}
-            </Panels.Option>
-            <Panels.Option
-              id={BOOT_MANUAL_ID}
-              name={OPTIONS_NAME}
-              isSelected={isBootManual}
-              onChange={selectBootManual}
-              controls={BOOT_MANUAL_PANEL_ID}
-            >
+            </RadioOption>
+          </legend>
+          <div>
+            {_("Additional partitions to boot the system will be configured at /dev/vdc, \
+            the device selected for installing the system.")}
+          </div>
+        </fieldset>
+
+        <fieldset className="stack">
+          <legend className="split">
+            <RadioOption id={BOOT_MANUAL_ID} defaultChecked={isBootManual} onChange={() => selectBootManual()}>
               {_("Select a disk")}
-            </Panels.Option>
-            <Panels.Option
-              id={BOOT_DISABLED_ID}
-              name={OPTIONS_NAME}
-              isSelected={isBootDisabled}
-              onChange={selectBootDisabled}
-              controls={BOOT_DISABLED_PANEL_ID}
-            >
-              {_("Do not configure")}
-            </Panels.Option>
-          </Panels.Options>
-          <Panels.Panel id={BOOT_AUTO_PANEL_ID} isExpanded={isBootAuto}>
-            <p>
-              {_("If needed, additional partitions to boot the system will be configured in the \
-device selected for installing the system.")}
-            </p>
-          </Panels.Panel>
+            </RadioOption>
+          </legend>
 
-          <Panels.Panel id={BOOT_MANUAL_PANEL_ID} isExpanded={isBootManual}>
-            <p>
-              {_("If needed, additional partitions to boot the system will be configured in the \
-following selected device.")}
-            </p>
-
-            <DeviceSelectorTable
+          <div className="stack">
+            <div>
+              {_("Additional partitions to boot the system will be configured in the \
+                following selected device.")}
+            </div>
+            <DevicesFormSelect
+              aria-label={_("Choose a disk for placing the boot loader")}
               devices={devices}
-              selected={[bootDevice]}
-              itemChildren={deviceChildren}
-              itemSelectable={isDeviceSelectable}
-              onSelectionChange={selectBootDevice}
-              variant="compact"
+              selectedDevice={bootDevice}
+              onChange={setBootDevice}
+              isDisabled={!isBootManual}
             />
-          </Panels.Panel>
-          <Panels.Panel id={BOOT_DISABLED_PANEL_ID} isExpanded={isBootDisabled}>
-            <p>
-              {_("Additional partitions will not be configured to boot the system.")}
-            </p>
-          </Panels.Panel>
-        </Panels>
+          </div>
+        </fieldset>
+
+        <fieldset className="stack">
+          <legend className="split">
+            <RadioOption id={BOOT_DISABLED_ID} defaultChecked={!configureBoot} onChange={() => selectBootDisabled()}>
+              {_("Do not configure")}
+            </RadioOption>
+          </legend>
+          <div>
+            {_("Additional partitions will not be configured to boot the system.")}
+          </div>
+        </fieldset>
       </Form>
       <Popup.Actions>
         <Popup.Confirm form="boot-form" type="submit" isDisabled={isAcceptDisabled()} />
