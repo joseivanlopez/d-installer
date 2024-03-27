@@ -66,8 +66,7 @@ const DeviceExtendedInfo = ({ device }) => {
       case "disk": {
         type = device.sdCard
           ? _("SD Card")
-          // TRANSLATORS: %s is replaced by the device transport name, e.g. USB, SATA, SCSI...
-          : sprintf(_("Transport %s"), device.transport);
+          : (device.transport || device.bus);
       }
     }
 
