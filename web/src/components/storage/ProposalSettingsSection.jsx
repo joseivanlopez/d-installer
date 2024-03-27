@@ -22,12 +22,13 @@
 import React, { useEffect, useState } from "react";
 import { Button, Checkbox, Form, Skeleton, Switch, Tooltip } from "@patternfly/react-core";
 
+import { sprintf } from "sprintf-js";
 import { _ } from "~/i18n";
 import { BootSelectionDialog, ProposalVolumes, ProposalSpacePolicyField } from "~/components/storage";
 import { If, PasswordAndConfirmationInput, Section, Popup } from "~/components/core";
 import { Icon } from "~/components/layout";
 import { noop } from "~/utils";
-import { hasFS } from "~/components/storage/utils";
+import { hasFS, deviceLabel } from "~/components/storage/utils";
 
 /**
  * @typedef {import ("~/client/storage").ProposalManager.ProposalSettings} ProposalSettings
@@ -300,11 +301,15 @@ const BootConfigField = ({
     onChange({ configureBoot, bootDevice });
   };
 
-  const label = () => {
-    if (configureBoot)
-      return _("If needed, additional partitions will be configured to boot the system");
-    else
-      return _("Additional partitions will not be configured to boot the system");
+  const label = _("Automatically configure any additional partition to boot the system");
+
+  const value = () => {
+    if (!configureBoot) return _("nowhere (manual boot setup)");
+
+    if (!bootDevice) return _("at the installation device");
+
+    // TRANSLATORS: %s is the disk used to configure the boot-related partitions (eg. "/dev/sda, 80 GiB)
+    return sprintf(_("at %s"), deviceLabel(bootDevice));
   };
 
   if (isLoading) {
@@ -313,8 +318,8 @@ const BootConfigField = ({
 
   return (
     <div className="split">
-      <span>{label()}</span>
-      <Button variant="link" onClick={openDialog}>{_("change")}</Button>
+      <span>{label}</span>
+      <Button variant="link" isInline onClick={openDialog}>{value()}</Button>
       <If
         condition={isDialogOpen}
         then={
