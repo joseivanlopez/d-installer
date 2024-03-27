@@ -64,9 +64,15 @@ const DeviceExtendedInfo = ({ device }) => {
         break;
       }
       case "disk": {
-        type = device.sdCard
-          ? _("SD Card")
-          : (device.transport || device.bus);
+        if (device.sdCard) {
+          type = _("SD Card");
+        } else {
+          const technology = device.transport || device.bus;
+          type = technology
+            // TRANSLATORS: %s is substituted by the type of disk like "iSCSI" or "SATA"
+            ? sprintf(_("%s disk"), technology)
+            : _("Disk");
+        }
       }
     }
 
