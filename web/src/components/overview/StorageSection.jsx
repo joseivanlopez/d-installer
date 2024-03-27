@@ -55,7 +55,7 @@ const ProposalSummary = ({ proposal }) => {
           // TRANSLATORS: %1$s will be replaced by "LVM volume group" (already translated and with some markup)
           // %2$s (if present) will be replaced by a device name and its size (eg. "/dev/sda, 20 GiB")
           return n_(
-            "Install in a new %1$s over %2$s shrinking existing partitions as needed",
+            "Install in a new %1$s on %2$s shrinking existing partitions as needed",
             "Install in a new %1$s shrinking existing partitions at the underlying devices as needed",
             num_pvs
           );
@@ -63,7 +63,7 @@ const ProposalSummary = ({ proposal }) => {
           // TRANSLATORS: %1$s will be replaced by "LVM volume group" (already translated and with some markup)
           // %2$s (if present) will be replaced by a device name and its size (eg. "/dev/sda, 20 GiB")
           return n_(
-            "Install in a new %1$s over %2$s without modifying existing partitions",
+            "Install in a new %1$s on %2$s without modifying existing partitions",
             "Install in a new %1$s without modifying the partitions at the underlying devices",
             num_pvs
           );
@@ -71,7 +71,7 @@ const ProposalSummary = ({ proposal }) => {
           // TRANSLATORS: %1$s will be replaced by "LVM volume group" (already translated and with some markup)
           // %2$s (if present) will be replaced by a device name and its size (eg. "/dev/sda, 20 GiB")
           return n_(
-            "Install in a new %1$s over %2$s deleting all its content",
+            "Install in a new %1$s on %2$s deleting all its content",
             "Install in a new %1$s deleting all the content of the underlying devices",
             num_pvs
           );
@@ -79,7 +79,7 @@ const ProposalSummary = ({ proposal }) => {
           // TRANSLATORS: %1$s will be replaced by "LVM volume group" (already translated and with some markup)
           // %2$s (if present) will be replaced by a device name and its size (eg. "/dev/sda, 20 GiB")
           return n_(
-            "Install in a new %1$s over %2$s using a custom strategy to find the needed space",
+            "Install in a new %1$s on %2$s using a custom strategy to find the needed space",
             "Install in a new %1$s using a custom strategy to find the needed space at the underlying devices",
             num_pvs
           );

@@ -31,6 +31,7 @@ import { _ } from "~/i18n";
 import { DeviceSelectionDialog } from "~/components/storage";
 import { deviceLabel } from '~/components/storage/utils';
 import { If, Section } from "~/components/core";
+import { sprintf } from "sprintf-js";
 import { noop } from "~/utils";
 
 /**
@@ -50,7 +51,14 @@ import { noop } from "~/utils";
 const TargetDeviceButton = ({ target, targetDevice, targetPVDevices, onClick = noop }) => {
   const label = () => {
     if (target === "disk" && targetDevice) return deviceLabel(targetDevice);
-    if (target === "newLvmVg" && targetPVDevices.length > 0) return _("New LVM volume group");
+    if (target === "newLvmVg") {
+      if (targetPVDevices.length > 1) return _("new LVM volume group");
+
+      if (targetPVDevices.length === 1) {
+        // TRANSLATORS: %s is the disk used for the LVM physical volumes (eg. "/dev/sda, 80 GiB)
+        return sprintf(_("new LVM volume group on %s"), deviceLabel(targetPVDevices[0]));
+      }
+    }
 
     return _("No device selected yet");
   };
