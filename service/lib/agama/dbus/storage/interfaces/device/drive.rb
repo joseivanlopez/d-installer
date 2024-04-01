@@ -85,10 +85,10 @@ module Agama
             #
             # @return [String]
             def drive_bus
-              # FIXME: not sure how robust this is (is the value always in English?)
-              return "" if storage_device.bus.casecmp?("none")
+              # FIXME: not sure whether checking for "none" is robust enough
+              return "" if storage_device.bus.nil? || storage_device.bus.casecmp?("none")
 
-              storage_device.bus || ""
+              storage_device.bus
             end
 
             # Bus Id for DASD
@@ -114,7 +114,7 @@ module Agama
               return "" unless storage_device.respond_to?(:transport)
 
               transport = storage_device.transport
-              return "" if transport.is?(:unknown)
+              return "" if transport.nil? || transport.is?(:unknown)
 
               # FIXME: transport does not have proper i18n support at yast2-storage-ng, so we are
               # just duplicating some logic from yast2-storage-ng here
