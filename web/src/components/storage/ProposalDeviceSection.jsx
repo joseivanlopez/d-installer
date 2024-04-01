@@ -32,7 +32,7 @@ import { DeviceSelectionDialog } from "~/components/storage";
 import { deviceLabel } from '~/components/storage/utils';
 import { If, Section } from "~/components/core";
 import { sprintf } from "sprintf-js";
-import { noop } from "~/utils";
+import { compact, noop } from "~/utils";
 
 /**
  * @typedef {import ("~/client/storage").ProposalSettings} ProposalSettings
@@ -51,7 +51,7 @@ import { noop } from "~/utils";
 const TargetDeviceButton = ({ target, targetDevice, targetPVDevices, onClick = noop }) => {
   const label = () => {
     if (target === "disk" && targetDevice) return deviceLabel(targetDevice);
-    if (target === "newLvmVg") {
+    if (target === "newLvmVg" && targetPVDevices.length > 0) {
       if (targetPVDevices.length > 1) return _("new LVM volume group");
 
       if (targetPVDevices.length === 1) {
@@ -157,7 +157,7 @@ export default function ProposalDeviceSection({
 
   const target = settings.target;
   const targetDevice = findDevice(settings.targetDevice);
-  const targetPVDevices = settings.targetPVDevices?.map(findDevice);
+  const targetPVDevices = compact(settings.targetPVDevices?.map(findDevice) || []);
 
   const changeTarget = ({ target, targetDevice, targetPVDevices }) => {
     onChange({

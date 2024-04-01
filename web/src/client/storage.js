@@ -113,7 +113,7 @@ const ZFCP_DISK_IFACE = "org.opensuse.Agama.Storage1.ZFCP.Disk";
  * @typedef {object} ProposalSettings
  * @property {string} target
  * @property {string} [targetDevice]
- * @property {string[]} [targetPVDevices]
+ * @property {string[]} targetPVDevices
  * @property {boolean} configureBoot
  * @property {string} bootDevice
  * @property {string} defaultBootDevice

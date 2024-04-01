@@ -137,6 +137,7 @@ export default function DeviceSelectionDialog({
             </Html>
 
             <DeviceSelectorTable
+              aria-label={_("Device selector for target disk")}
               devices={devices}
               selected={[targetDevice]}
               itemChildren={deviceChildren}
@@ -156,6 +157,7 @@ Group</b>. The corresponding physical volumes will be created on demand as new p
             </Html>
 
             <DeviceSelectorTable
+              aria-label={_("Device selector for new LVM volume group")}
               isMultiple
               devices={devices}
               selected={targetPVDevices}

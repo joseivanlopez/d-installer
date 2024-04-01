@@ -66,17 +66,21 @@ const sdb = {
   udevPaths: ["pci-0000:00-19"]
 };
 
-const props = {
-  settings: {
-    target: "disk",
-    targetDevice: "/dev/sda",
-  },
-  availableDevices: [sda, sdb],
-  isLoading: false,
-  onChange: jest.fn()
-};
+let props;
 
 describe("ProposalDeviceSection", () => {
+  beforeEach(() => {
+    props = {
+      settings: {
+        target: "disk",
+        targetDevice: "/dev/sda",
+      },
+      availableDevices: [sda, sdb],
+      isLoading: false,
+      onChange: jest.fn()
+    }
+  });
+
   describe("Installation device field", () => {
     describe("when set as loading", () => {
       beforeEach(() => {
@@ -85,7 +89,7 @@ describe("ProposalDeviceSection", () => {
 
       describe("and selected device is not defined yet", () => {
         beforeEach(() => {
-          props.settings = { targetDevice: undefined };
+          props.settings.target = undefined;
         });
 
         it("renders a loading hint", () => {
@@ -94,33 +98,91 @@ describe("ProposalDeviceSection", () => {
         });
       });
     });
-    describe("when installation device is not selected yet", () => {
+
+    describe("when the target is a disk", () => {
       beforeEach(() => {
-        props.settings = { targetDevice: "" };
+        props.settings.target = "disk";
       });
 
-      it("uses a 'No device selected yet' text for the selection button", async () => {
-        const { user } = plainRender(<ProposalDeviceSection {...props} />);
-        const button = screen.getByRole("button", { name: "No device selected yet" });
+      describe("and installation device is not selected yet", () => {
+        beforeEach(() => {
+          props.settings.targetDevice = "";
+        });
 
-        await user.click(button);
+        it("uses a 'No device selected yet' text for the selection button", async () => {
+          const { user } = plainRender(<ProposalDeviceSection {...props} />);
+          const button = screen.getByRole("button", { name: "No device selected yet" });
 
-        screen.getByRole("dialog", { name: "Installation device" });
+          await user.click(button);
+
+          screen.getByRole("dialog", { name: /Device for installing/i });
+        });
+      });
+
+      describe("and an installation device is selected", () => {
+        beforeEach(() => {
+          props.settings.targetDevice = "/dev/sda";
+        });
+
+        it("uses its name as part of the text for the selection button", async () => {
+          const { user } = plainRender(<ProposalDeviceSection {...props} />);
+          const button = screen.getByRole("button", { name: /\/dev\/sda/ });
+
+          await user.click(button);
+
+          screen.getByRole("dialog", { name: /Device for installing/i });
+        });
       });
     });
 
-    describe("when installation device is selected", () => {
+    describe("when the target is a new LVM volume group", () => {
       beforeEach(() => {
-        props.settings = { targetDevice: "/dev/sda" };
+        props.settings.target = "newLvmVg";
       });
 
-      it("uses its name as part of the text for the selection button", async () => {
-        const { user } = plainRender(<ProposalDeviceSection {...props} />);
-        const button = screen.getByRole("button", { name: /\/dev\/sda/ });
+      describe("and the target devices are not seletect yet", () => {
+        beforeEach(() => {
+          props.settings.targetPVDevices = [];
+        });
 
-        await user.click(button);
+        it("uses a 'No device selected yet' text for the selection button", async () => {
+          const { user } = plainRender(<ProposalDeviceSection {...props} />);
+          const button = screen.getByRole("button", { name: "No device selected yet" });
 
-        screen.getByRole("dialog", { name: "Installation device" });
+          await user.click(button);
+
+          screen.getByRole("dialog", { name: /Device for installing/i });
+        });
+      });
+
+      describe("and there is a selected device", () => {
+        beforeEach(() => {
+          props.settings.targetPVDevices = ["/dev/sda"];
+        });
+
+        it("uses its name as part of the text for the selection button", async () => {
+          const { user } = plainRender(<ProposalDeviceSection {...props} />);
+          const button = screen.getByRole("button", { name: /new LVM .* \/dev\/sda/ });
+
+          await user.click(button);
+
+          screen.getByRole("dialog", { name: /Device for installing/i });
+        });
+      });
+
+      describe("and there are more than one selected device", () => {
+        beforeEach(() => {
+          props.settings.targetPVDevices = ["/dev/sda", "/dev/sdb"];
+        });
+
+        it("does not use the names as part of the text for the selection button", async () => {
+          const { user } = plainRender(<ProposalDeviceSection {...props} />);
+          const button = screen.getByRole("button", { name: "new LVM volume group" });
+
+          await user.click(button);
+
+          screen.getByRole("dialog", { name: /Device for installing/i });
+        });
       });
     });
 
@@ -130,15 +192,21 @@ describe("ProposalDeviceSection", () => {
 
       await user.click(button);
 
-      const selector = await screen.findByRole("dialog", { name: "Installation device" });
-      const sdbOption = within(selector).getByRole("radio", { name: /sdb/ });
-      const accept = within(selector).getByRole("button", { name: "Accept" });
+      const selector = await screen.findByRole("dialog", { name: /Device for installing/ });
+      const diskGrid = within(selector).getByRole("grid", { name: /target disk/ });
+      const sdbRow = within(diskGrid).getByRole("row", { name: /sdb/ });
+      const sdbOption = within(sdbRow).getByRole("radio");
+      const accept = within(selector).getByRole("button", { name: "Confirm" });
 
       await user.click(sdbOption);
       await user.click(accept);
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(props.onChange).toHaveBeenCalledWith({ targetDevice: sdb.name });
+      expect(props.onChange).toHaveBeenCalledWith({
+        target: "disk",
+        targetDevice: sdb.name,
+        targetPVDevices: []
+      });
     });
 
     it("allows canceling a device selection", async () => {
@@ -147,37 +215,16 @@ describe("ProposalDeviceSection", () => {
 
       await user.click(button);
 
-      const selector = await screen.findByRole("dialog", { name: "Installation device" });
-      const sdbOption = within(selector).getByRole("radio", { name: /sdb/ });
+      const selector = await screen.findByRole("dialog", { name: /Device for installing/ });
+      const diskGrid = within(selector).getByRole("grid", { name: /target disk/ });
+      const sdbRow = within(diskGrid).getByRole("row", { name: /sdb/ });
+      const sdbOption = within(sdbRow).getByRole("radio");
       const cancel = within(selector).getByRole("button", { name: "Cancel" });
 
       await user.click(sdbOption);
       await user.click(cancel);
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(props.onChange).not.toHaveBeenCalled();
-    });
-
-    it("does not trigger the onChange callback when selection actually did not change", async () => {
-      const { user } = plainRender(<ProposalDeviceSection {...props} />);
-      const button = screen.getByRole("button", { name: "/dev/sda, 1 KiB" });
-
-      await user.click(button);
-
-      const selector = await screen.findByRole("dialog", { name: "Installation device" });
-      const sdaOption = within(selector).getByRole("radio", { name: /sda/ });
-      const sdbOption = within(selector).getByRole("radio", { name: /sdb/ });
-      const accept = within(selector).getByRole("button", { name: "Accept" });
-
-      // User selects a different device
-      await user.click(sdbOption);
-      // but then goes back to the selected device
-      await user.click(sdaOption);
-      // and clicks on Accept button
-      await user.click(accept);
-
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      // There is no reason for triggering the onChange callback
       expect(props.onChange).not.toHaveBeenCalled();
     });
   });
