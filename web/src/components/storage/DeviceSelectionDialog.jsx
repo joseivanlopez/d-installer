@@ -22,7 +22,6 @@
 import React, { useState } from "react";
 import { Form } from "@patternfly/react-core";
 
-import { sprintf } from "sprintf-js";
 import { _ } from "~/i18n";
 import { deviceChildren } from "~/components/storage/utils";
 import { ControlledPanels as Panels, Popup } from "~/components/core";
@@ -39,10 +38,6 @@ const CREATE_LVM_ID = "create-lvm";
 const SELECT_DISK_PANEL_ID = "panel-for-disk-selection";
 const CREATE_LVM_PANEL_ID = "panel-for-lvm-creation";
 const OPTIONS_NAME = "selection-mode";
-
-const baseDescription = _("All the file systems will be created as <b>%s</b> \
-  by default, although the location of each file system can be customized later \
-  if needed.");
 
 const Html = ({ children, ...props }) => (
   <div {...props} dangerouslySetInnerHTML={{ __html: children }} />
@@ -129,13 +124,16 @@ export default function DeviceSelectionDialog({
               onChange={selectTargetNewLvmVG}
               controls={CREATE_LVM_PANEL_ID}
             >
-              {_("Create a LVM Volume Group")}
+              {_("Create an LVM Volume Group")}
             </Panels.Option>
           </Panels.Options>
 
           <Panels.Panel id={SELECT_DISK_PANEL_ID} isExpanded={isTargetDisk}>
             <Html>
-              { sprintf(baseDescription, _("partitions in the selected device")) }
+              {
+                // TRANSLATORS: beware the HTML markup (<b> and </b>)
+                _("The file systems will be allocated by default as <b>new partitions in the selected device</b>.")
+              }
             </Html>
 
             <DeviceSelectorTable
@@ -150,12 +148,12 @@ export default function DeviceSelectionDialog({
 
           <Panels.Panel id={CREATE_LVM_PANEL_ID} isExpanded={isTargetNewLvmVg} className="stack">
             <Html>
-              { sprintf(baseDescription, _("logical volumes of a new LVM Volume Group")) }
+              {
+                // TRANSLATORS: beware the HTML markup (<b> and </b>)
+                _("The file systems will be allocated by default as <b>logical volumes of a new LVM Volume \
+Group</b>. The corresponding physical volumes will be created on demand as new partitions at the selected devices.")
+              }
             </Html>
-
-            <div>
-              {_("The Physical Volumes for the new Volume Group will be allocated in the selected devices.")}
-            </div>
 
             <DeviceSelectorTable
               isMultiple
