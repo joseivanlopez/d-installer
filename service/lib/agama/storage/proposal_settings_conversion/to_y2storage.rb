@@ -66,7 +66,7 @@ module Agama
 
           case device_settings
           when DeviceSettings::Disk
-            disk_device_conversion(target)
+            disk_device_conversion(target, device_settings)
           when DeviceSettings::NewLvmVg
             new_lvm_vg_device_conversion(target, device_settings)
           when DeviceSettings::ReusedLvmVg
@@ -75,9 +75,16 @@ module Agama
         end
 
         # @param target [Y2Storage::ProposalSettings]
-        def disk_device_conversion(target)
+        # @param device_settings [DeviceSettings::Disk]
+        def disk_device_conversion(target, device_settings)
           target.lvm = false
-          target.candidate_devices = [settings.boot.device].compact
+          target.candidate_devices = []
+
+          return unless settings.boot.configure?
+
+          boot_device = settings.boot.device || device_settings.name
+          target.root_device = boot_device
+          target.candidate_devices = [boot_device].compact
         end
 
         # @param target [Y2Storage::ProposalSettings]
@@ -85,6 +92,11 @@ module Agama
         def new_lvm_vg_device_conversion(target, device_settings)
           enable_lvm(target)
           target.candidate_devices = device_settings.candidate_pv_devices
+
+          return unless settings.boot.configure?
+
+          boot_device = settings.boot.device || device_settings.candidate_pv_devices.min
+          target.root_device = boot_device
         end
 
         # @param target [Y2Storage::ProposalSettings]
@@ -92,6 +104,7 @@ module Agama
         def reused_lvm_vg_device_conversion(target, _device_settings)
           enable_lvm(target)
           # TODO: Sets the reused VG (not supported by yast2-storage-ng yet).
+          # TODO: Decide what to consider as default root device.
           # TODO: Decide what to consider as candidate devices.
           target.candidate_devices = []
         end
@@ -109,7 +122,6 @@ module Agama
 
         # @param target [Y2Storage::ProposalSettings]
         def boot_conversion(target)
-          target.root_device = settings.boot.device
           target.boot = settings.boot.configure?
         end
 
