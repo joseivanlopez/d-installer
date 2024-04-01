@@ -22,9 +22,10 @@
 import React, { useState } from "react";
 import { Form } from "@patternfly/react-core";
 import { _ } from "~/i18n";
+import { DevicesFormSelect } from "~/components/storage";
 import { noop } from "~/utils";
 import { Popup } from "~/components/core";
-import { DevicesFormSelect } from "~/components/storage";
+import { sprintf } from "sprintf-js";
 
 /**
  * @typedef {import ("~/client/storage").StorageDevice} StorageDevice
@@ -61,23 +62,25 @@ const RadioOption = ({ id, onChange, defaultChecked, children }) => {
  * @param {object} props
  * @param {boolean} props.configureBoot - Whether the boot is configurable
  * @param {StorageDevice|undefined} props.bootDevice - Currently selected booting device.
+ * @param {StorageDevice|undefined} props.defaultBootDevice - Default booting device.
  * @param {StorageDevice[]} props.devices - Devices that user can select to boot from.
  * @param {boolean} [props.isOpen=false] - Whether the dialog is visible or not.
  * @param {function} [props.onCancel=noop] - Callback to execute when user closes the dialog.
  * @param {(boot: Boot) => void} props.onAccept
  */
 export default function BootSelectionDialog({
-  configureBoot: defaultConfigureBoot,
-  bootDevice: defaultBootDevice,
+  configureBoot: configureBootProp,
+  bootDevice: bootDeviceProp,
+  defaultBootDevice,
   devices,
   isOpen,
   onCancel = noop,
   onAccept = noop,
   ...props
 }) {
-  const [configureBoot, setConfigureBoot] = useState(defaultConfigureBoot);
-  const [bootDevice, setBootDevice] = useState(defaultBootDevice || devices[0]);
-  const [isBootAuto, setIsBootAuto] = useState(defaultConfigureBoot && defaultBootDevice === undefined);
+  const [configureBoot, setConfigureBoot] = useState(configureBootProp);
+  const [bootDevice, setBootDevice] = useState(bootDeviceProp || defaultBootDevice);
+  const [isBootAuto, setIsBootAuto] = useState(configureBootProp && bootDeviceProp === undefined);
 
   const isBootManual = configureBoot && !isBootAuto;
 
@@ -121,8 +124,9 @@ export default function BootSelectionDialog({
             </RadioOption>
           </legend>
           <div>
-            {_("Additional partitions to boot the system will be configured at /dev/vdc, \
-            the device selected for installing the system.")}
+            {/* TRANSLATORS: %s is replaced by a device name (e.g., /dev/sda) */}
+            {sprintf(_("Additional partitions to boot the system will be configured at %s, \
+            the device selected for installing the system."), defaultBootDevice.name)}
           </div>
         </fieldset>
 

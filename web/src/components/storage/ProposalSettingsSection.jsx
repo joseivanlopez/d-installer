@@ -274,7 +274,8 @@ const EncryptionField = ({
  *
  * @param {object} props
  * @param {boolean} props.configureBoot
- * @param {StorageDevice} props.bootDevice
+ * @param {StorageDevice|undefined} props.bootDevice
+ * @param {StorageDevice|undefined} props.defaultBootDevice
  * @param {StorageDevice[]} props.devices
  * @param {boolean} props.isLoading
  * @param {(boot: Boot) => void} props.onChange
@@ -286,6 +287,7 @@ const EncryptionField = ({
 const BootConfigField = ({
   configureBoot,
   bootDevice,
+  defaultBootDevice,
   devices,
   isLoading,
   onChange
@@ -327,6 +329,7 @@ const BootConfigField = ({
             isOpen
             configureBoot={configureBoot}
             bootDevice={bootDevice}
+            defaultBootDevice={defaultBootDevice}
             devices={devices}
             onAccept={onAccept}
             onCancel={closeDialog}
@@ -395,6 +398,7 @@ export default function ProposalSettingsSection({
   const { volumes = [], installationDevices = [] } = settings;
 
   const bootDevice = availableDevices.find(d => d.name === settings.bootDevice);
+  const defaultBootDevice = availableDevices.find(d => d.name === settings.defaultBootDevice);
 
   // Templates for already existing mount points are filtered out
   const usefulTemplates = () => {
@@ -429,6 +433,7 @@ export default function ProposalSettingsSection({
         <BootConfigField
           configureBoot={settings.configureBoot}
           bootDevice={bootDevice}
+          defaultBootDevice={defaultBootDevice}
           devices={availableDevices}
           isLoading={isLoading}
           onChange={changeBoot}
