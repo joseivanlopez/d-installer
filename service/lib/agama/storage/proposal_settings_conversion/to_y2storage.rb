@@ -66,7 +66,7 @@ module Agama
 
           case device_settings
           when DeviceSettings::Disk
-            disk_device_conversion(target, device_settings)
+            disk_device_conversion(target)
           when DeviceSettings::NewLvmVg
             new_lvm_vg_device_conversion(target, device_settings)
           when DeviceSettings::ReusedLvmVg
@@ -75,15 +75,8 @@ module Agama
         end
 
         # @param target [Y2Storage::ProposalSettings]
-        # @param device_settings [DeviceSettings::Disk]
-        def disk_device_conversion(target, device_settings)
+        def disk_device_conversion(target)
           target.lvm = false
-          target.candidate_devices = []
-
-          return unless settings.boot.configure?
-
-          boot_device = settings.boot.device || device_settings.name
-          target.root_device = boot_device
           target.candidate_devices = [boot_device].compact
         end
 
@@ -92,11 +85,6 @@ module Agama
         def new_lvm_vg_device_conversion(target, device_settings)
           enable_lvm(target)
           target.candidate_devices = device_settings.candidate_pv_devices
-
-          return unless settings.boot.configure?
-
-          boot_device = settings.boot.device || device_settings.candidate_pv_devices.min
-          target.root_device = boot_device
         end
 
         # @param target [Y2Storage::ProposalSettings]
@@ -104,7 +92,6 @@ module Agama
         def reused_lvm_vg_device_conversion(target, _device_settings)
           enable_lvm(target)
           # TODO: Sets the reused VG (not supported by yast2-storage-ng yet).
-          # TODO: Decide what to consider as default root device.
           # TODO: Decide what to consider as candidate devices.
           target.candidate_devices = []
         end
@@ -123,6 +110,7 @@ module Agama
         # @param target [Y2Storage::ProposalSettings]
         def boot_conversion(target)
           target.boot = settings.boot.configure?
+          target.root_device = boot_device
         end
 
         # @param target [Y2Storage::ProposalSettings]
@@ -206,6 +194,13 @@ module Agama
         def find_max_size_fallback(mount_path)
           volume = settings.volumes.find { |v| v.max_size_fallback_for.include?(mount_path) }
           volume&.mount_path
+        end
+
+        # Device used for booting.
+        #
+        # @return [String, nil]
+        def boot_device
+          settings.boot.device || settings.default_boot_device
         end
 
         # All block devices affected by the space policy.
