@@ -25,6 +25,7 @@ import { _ } from "~/i18n";
 import { DevicesFormSelect } from "~/components/storage";
 import { noop } from "~/utils";
 import { Popup } from "~/components/core";
+import { deviceLabel } from "~/components/storage/utils";
 import { sprintf } from "sprintf-js";
 
 /**
@@ -109,11 +110,16 @@ export default function BootSelectionDialog({
     return isBootManual && bootDevice === undefined;
   };
 
+  const description = _(
+    "To ensure the new system is able to boot, the installer may need to create or configure some \
+partitions in the appropriate disk."
+  );
+
   return (
     <Popup
-      title={_("Configuration for boot partitions")}
+      title={_("Partitions for booting")}
+      description={description}
       isOpen={isOpen}
-      className="large"
       {...props}
     >
       <Form id="boot-form" onSubmit={onSubmit}>
@@ -124,9 +130,11 @@ export default function BootSelectionDialog({
             </RadioOption>
           </legend>
           <div>
-            {/* TRANSLATORS: %s is replaced by a device name (e.g., /dev/sda) */}
-            {sprintf(_("Additional partitions to boot the system will be configured at %s, \
-            the device selected for installing the system."), defaultBootDevice.name)}
+            {sprintf(
+              // TRANSLATORS: %s is replaced by a device name and size (e.g., "/dev/sda, 500GiB")
+              _("Partitions to boot will be allocated at the installation disk (%s)"),
+              deviceLabel(defaultBootDevice)
+            )}
           </div>
         </fieldset>
 
@@ -139,8 +147,7 @@ export default function BootSelectionDialog({
 
           <div className="stack">
             <div>
-              {_("Additional partitions to boot the system will be configured in the \
-                following selected device.")}
+              {_("Partitions to boot will be allocated at the following device.")}
             </div>
             <DevicesFormSelect
               aria-label={_("Choose a disk for placing the boot loader")}
@@ -159,7 +166,7 @@ export default function BootSelectionDialog({
             </RadioOption>
           </legend>
           <div>
-            {_("Additional partitions will not be configured to boot the system.")}
+            {_("No partitions will be automatically configured for booting. Use with caution.")}
           </div>
         </fieldset>
       </Form>
