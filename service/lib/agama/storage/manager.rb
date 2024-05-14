@@ -175,6 +175,8 @@ module Agama
 
       # Activates the devices, calling activation callbacks if needed
       def activate_devices
+        return if probe_from_file?
+
         callbacks = Callbacks::Activate.new(questions_client, logger)
 
         iscsi.activate
@@ -183,13 +185,30 @@ module Agama
 
       # Probes the devices
       def probe_devices
-        callbacks = Y2Storage::Callbacks::UserProbe.new
-
-        iscsi.probe
-        Y2Storage::StorageManager.instance.probe(callbacks)
+        if probe_from_file?
+          file = probe_file
+          if file =~ /.ya?ml$/
+            Y2Storage::StorageManager.instance(mode: :rw).probe_from_yaml(file)
+          else
+            Y2Storage::StorageManager.instance(mode: :rw).probe_from_xml(file)
+          end
+        else
+          callbacks = Y2Storage::Callbacks::UserProbe.new
+          iscsi.probe
+          Y2Storage::StorageManager.instance.probe(callbacks)
+        end
 
         # The system is not deprecated anymore
         self.deprecated_system = false
+      end
+
+      def probe_from_file?
+        file = probe_file
+        file && File.exist?(file) && file =~ /.(xml|ya?ml)$/
+      end
+
+      def probe_file
+        ENV["AGAMA_STORAGE"]
       end
 
       # Calculates the proposal using the settings from the config file.
