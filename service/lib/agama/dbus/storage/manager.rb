@@ -88,6 +88,21 @@ module Agama
           busy_while { backend.probe }
         end
 
+        # Loads storage settings.
+        #
+        # @param settings [String] Serialized JSON settings.
+        #   It can be storage or legacy AutoYaST settings:
+        #   { "storage": ... } vs { "legacyAutoyastStorage": ... }
+        def load_config(settings)
+          # @todo
+          #   * Generate ProposalSettings from serialized JSON if settings are "storage"
+          #     (#from_json).
+          #   * Calculate guided or autoyast proposal depending on the given settings.
+
+          logger.info("******* load config: #{settings}")
+          0
+        end
+
         def install
           busy_while { backend.install }
         end
@@ -105,6 +120,9 @@ module Agama
 
         dbus_interface STORAGE_INTERFACE do
           dbus_method(:Probe) { probe }
+          dbus_method(:LoadConfig, "in settings:s, out result:u") do |settings|
+            busy_while { load_config(settings) }
+          end
           dbus_method(:Install) { install }
           dbus_method(:Finish) { finish }
           dbus_reader(:deprecated_system, "b")
@@ -242,6 +260,7 @@ module Agama
             {
               "success"  => proposal.success?,
               "strategy" => ProposalStrategy::GUIDED,
+              # @todo Return settings as serialized JSON (#to_json).
               "settings" => ProposalSettingsConversion.to_dbus(proposal.settings)
             }
           else
