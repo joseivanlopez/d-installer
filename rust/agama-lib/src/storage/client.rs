@@ -6,9 +6,9 @@ use super::model::{
     ProposalTarget, Raid, Volume,
 };
 use super::proxies::{ProposalCalculatorProxy, ProposalProxy, Storage1Proxy};
-use super::StorageSettings;
 use crate::dbus::get_property;
 use crate::error::ServiceError;
+use crate::install_settings::InstallSettings;
 use std::collections::HashMap;
 use zbus::fdo::ObjectManagerProxy;
 use zbus::names::{InterfaceName, OwnedInterfaceName};
@@ -143,35 +143,16 @@ impl<'a> StorageClient<'a> {
         Ok(self.storage_proxy.probe().await?)
     }
 
-    /// TODO: remove calculate when CLI will be adapted
-    pub async fn calculate2(&self, settings: ProposalSettingsPatch) -> Result<u32, ServiceError> {
+    /// Loads the config
+    pub async fn load_config(&self, settings: &InstallSettings) -> Result<u32, ServiceError> {
+        Ok(self
+            .storage_proxy
+            .load_config(serde_json::to_string(settings).unwrap().as_str())
+            .await?)
+    }
+
+    pub async fn calculate(&self, settings: ProposalSettingsPatch) -> Result<u32, ServiceError> {
         Ok(self.calculator_proxy.calculate(settings.into()).await?)
-    }
-
-    pub async fn calculate_autoyast(&self, settings: &str) -> Result<u32, ServiceError> {
-        Ok(self.calculator_proxy.calculate_autoyast(settings).await?)
-    }
-
-    /// Calculates a new proposal with the given settings.
-    pub async fn calculate(&self, settings: &StorageSettings) -> Result<u32, ServiceError> {
-        let mut dbus_settings: HashMap<&str, zbus::zvariant::Value<'_>> = HashMap::new();
-
-        if let Some(boot_device) = settings.boot_device.clone() {
-            dbus_settings.insert("BootDevice", zbus::zvariant::Value::new(boot_device));
-        }
-
-        if let Some(encryption_password) = settings.encryption_password.clone() {
-            dbus_settings.insert(
-                "EncryptionPassword",
-                zbus::zvariant::Value::new(encryption_password),
-            );
-        }
-
-        if let Some(lvm) = settings.lvm {
-            dbus_settings.insert("LVM", zbus::zvariant::Value::new(lvm));
-        }
-
-        Ok(self.calculator_proxy.calculate(dbus_settings).await?)
     }
 
     /// Probed devices.
