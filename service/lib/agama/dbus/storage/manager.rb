@@ -34,8 +34,9 @@ require "agama/dbus/storage/proposal"
 require "agama/dbus/storage/volume_conversion"
 require "agama/dbus/storage/with_iscsi_auth"
 require "agama/dbus/with_service_status"
-require "agama/storage/volume_templates_builder"
 require "agama/storage/encryption_settings"
+require "agama/storage/proposal_settings_conversion"
+require "agama/storage/volume_templates_builder"
 
 Yast.import "Arch"
 
@@ -257,11 +258,11 @@ module Agama
           return {} unless proposal.calculated?
 
           if proposal.strategy?(ProposalStrategy::GUIDED)
+            settings = Agama::Storage::ProposalSettingsConversion.to_schema(proposal.settings)
             {
               "success"  => proposal.success?,
               "strategy" => ProposalStrategy::GUIDED,
-              # @todo Return settings as serialized JSON (#to_json).
-              "settings" => ProposalSettingsConversion.to_dbus(proposal.settings)
+              "settings" => settings.to_json
             }
           else
             {

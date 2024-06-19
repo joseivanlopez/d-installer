@@ -21,6 +21,7 @@
 
 require "agama/storage/proposal_settings_conversion/from_y2storage"
 require "agama/storage/proposal_settings_conversion/to_y2storage"
+require "agama/storage/proposal_settings_conversion/to_schema"
 
 module Agama
   module Storage
@@ -44,6 +45,14 @@ module Agama
       # @return [Y2Storage::ProposalSettings]
       def self.to_y2storage(settings, config:)
         ToY2Storage.new(settings, config: config).convert
+      end
+
+      # Performs conversion according to JSON schema.
+      #
+      # @param settings [Agama::Storage::ProposalSettings]
+      # @return [Hash]
+      def self.to_schema(settings)
+        ToSchema.new(settings).convert
       end
     end
   end
