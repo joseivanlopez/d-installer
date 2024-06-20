@@ -58,8 +58,6 @@ module Agama
             { disk: device_settings.name || "" }
           when Agama::Storage::DeviceSettings::NewLvmVg
             { newLvmVg: device_settings.candidate_pv_devices }
-          when Agama::Storage::DeviceSettings::ReusedLvmVg
-            { reusedLvmVg: device_settings.name || "" }
           end
         end
 
