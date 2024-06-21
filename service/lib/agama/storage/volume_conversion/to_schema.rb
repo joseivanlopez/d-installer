@@ -39,10 +39,12 @@ module Agama
         def convert
           {
             mount:      mount_conversion,
-            filesystem: filesystem_conversion,
             size:       size_conversion,
             target:     target_conversion
-          }
+          }.tap do |schema|
+            filesystem_schema = filesystem_conversion
+            schema[:filesystem] = filesystem_schema if filesystem_schema
+          end
         end
 
       private

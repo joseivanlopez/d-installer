@@ -50,7 +50,7 @@ module Agama
       # @param config [Agama::Config]
       #
       # @return [Agama::Storage::Volume]
-      def self.from_schema(volume_schema, config: config)
+      def self.from_schema(volume_schema, config:)
         FromSchema.new(volume_schema, config: config).convert
       end
 

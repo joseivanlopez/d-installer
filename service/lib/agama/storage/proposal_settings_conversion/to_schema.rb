@@ -39,10 +39,12 @@ module Agama
           {
             target:     target_conversion,
             boot:       boot_conversion,
-            encryption: encryption_conversion,
             space:      space_conversion,
             volumes:    volumes_conversion
-          }
+          }.tap do |schema|
+            encryption_schema = encryption_conversion
+            schema[:encryption] = encryption_schema if encryption_schema
+          end
         end
 
       private
@@ -55,31 +57,39 @@ module Agama
 
           case device_settings
           when Agama::Storage::DeviceSettings::Disk
-            { disk: device_settings.name || "" }
+            device = device_settings.name
+            device ? { disk: device } : "disk"
           when Agama::Storage::DeviceSettings::NewLvmVg
-            { newLvmVg: device_settings.candidate_pv_devices }
+            candidates = device_settings.candidate_pv_devices
+            candidates.any? ? { newLvmVg: candidates } : "newLvmVg"
           end
         end
 
         def boot_conversion
           {
-            configure: settings.boot.configure?,
-            device:    settings.boot.device
-          }
+            configure: settings.boot.configure?
+          }.tap do |schema|
+            device = settings.boot.device
+            schema[:device] = device if device
+          end
         end
 
         def encryption_conversion
+          return unless settings.encryption.encrypt?
+
           {
-            password:     settings.encryption.password.to_s,
-            method:       settings.encryption.method.id.to_s,
-            pbkdFunction: settings.encryption.pbkd_function&.value
-          }
+            password:     settings.encryption.password,
+            method:       settings.encryption.method.id.to_s
+          }.tap do |schema|
+            function = settings.encryption.pbkd_function
+            schema[:pbkdFunction] = function.value if function
+          end
         end
 
         def space_conversion
           {
             policy:  settings.space.policy.to_s,
-            actions: settings.space.actions.map { |d, a| { a => d} }
+            actions: settings.space.actions.map { |d, a| { a.to_sym => d} }
           }
         end
 
