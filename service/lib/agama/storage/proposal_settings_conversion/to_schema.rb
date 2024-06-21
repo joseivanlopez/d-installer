@@ -89,8 +89,14 @@ module Agama
         def space_conversion
           {
             policy:  settings.space.policy.to_s,
-            actions: settings.space.actions.map { |d, a| { a.to_sym => d} }
+            actions: settings.space.actions.map { |d, a| { action_key(a) => d } }
           }
+        end
+
+        def action_key(action)
+          return action.to_sym if action.to_s != "force_delete"
+
+          :forceDelete
         end
 
         def volumes_conversion

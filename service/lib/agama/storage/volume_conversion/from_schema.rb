@@ -57,15 +57,15 @@ module Agama
         attr_reader :config
 
         def mount_conversion(volume)
-          path_value = volume_schema.dig("mount", "path")
-          options_value = volume_schema.dig("mount", "options")
+          path_value = volume_schema.dig(:mount, :path)
+          options_value = volume_schema.dig(:mount, :options)
 
           volume.mount_path = path_value
           volume.mount_options = options_value if options_value
         end
 
         def filesystem_conversion(volume)
-          filesystem_schema = volume_schema["filesystem"]
+          filesystem_schema = volume_schema[:filesystem]
           return unless filesystem_schema
 
           filesystems = volume.outline.filesystems
@@ -77,15 +77,15 @@ module Agama
             fs_type = filesystems.find { |t| t.to_s == "btrfs" }
             volume.fs_type = fs_type if fs_type
 
-            snapshots_value = filesystem_schema.dig("btrfs", "snapshots")
+            snapshots_value = filesystem_schema.dig(:btrfs, :snapshots)
             configurable = volume.outline.snapshots_configurable?
-            volume.btrfs.snapshots = snapshots_value if configurable? && !snapshots_value.nil?
+            volume.btrfs.snapshots = snapshots_value if configurable && !snapshots_value.nil?
           end
         end
 
         # @todo Support array format ([min, max]) and string format ("2 GiB")
         def size_conversion(volume)
-          size_schema = volume_schema["size"]
+          size_schema = volume_schema[:size]
           return unless size_schema
 
           if size_schema == "auto"
@@ -93,8 +93,8 @@ module Agama
           else
             volume.auto_size = false
 
-            min_value = size_schema["min"]
-            max_value = size_schema["max"]
+            min_value = size_schema[:min]
+            max_value = size_schema[:max]
 
             volume.min_size = Y2Storage::DiskSize.new(min_value)
             if max_value
@@ -106,22 +106,22 @@ module Agama
         end
 
         def target_conversion(volume)
-          target_schema = volume_schema["target"]
+          target_schema = volume_schema[:target]
           return unless target_schema
 
           if target_schema == "default"
             volume.location.target = :default
             volume.location.device = nil
-          elsif device = target_schema["newPartition"]
+          elsif device = target_schema[:newPartition]
             volume.location.target = :new_partition
             volume.location.device = device
-          elsif device = target_schema["newVg"]
+          elsif device = target_schema[:newVg]
             volume.location.target = :new_vg
             volume.location.device = device
-          elsif device = target_schema["device"]
+          elsif device = target_schema[:device]
             volume.location.target = :device
             volume.location.device = device
-          elsif device = target_schema["filesystem"]
+          elsif device = target_schema[:filesystem]
             volume.location.target = :filesystem
             volume.location.device = device
           end
@@ -130,7 +130,7 @@ module Agama
         def default_volume
           Agama::Storage::VolumeTemplatesBuilder
             .new_from_config(config)
-            .for(volume_schema.dig("mount", "path"))
+            .for(volume_schema.dig(:mount, :path))
         end
       end
     end

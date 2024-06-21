@@ -45,6 +45,8 @@ describe Agama::Storage::ProposalSettingsConversion::ToSchema do
 
   describe "#convert" do
     it "converts the settings to the proper hash according to the JSON schema" do
+      # @todo Check whether the result matches the JSON schema.
+
       expect(described_class.new(default_settings).convert).to eq(
         target: "disk",
         boot: {
@@ -73,7 +75,7 @@ describe Agama::Storage::ProposalSettingsConversion::ToSchema do
         space: {
           policy: "custom",
           actions: [
-            { force_delete: "/dev/sda" },
+            { forceDelete: "/dev/sda" },
             { resize: "/dev/sdb1" }
           ]
         },

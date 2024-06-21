@@ -69,43 +69,43 @@ module Agama
         attr_reader :config
 
         def target_conversion
-          target_schema = schema_setting["target"]
+          target_schema = schema_settings[:target]
           return unless target_schema
 
           if target_schema == "disk"
             Agama::Storage::DeviceSettings::Disk.new
           elsif target_schema == "newLvmVg"
             Agama::Storage::DeviceSettings::NewLvmVg.new
-          elsif device = target_schema["disk"]
+          elsif device = target_schema[:disk]
             Agama::Storage::DeviceSettings::Disk.new(device)
-          elsif devices = target_schema["newLvmVg"]
+          elsif devices = target_schema[:newLvmVg]
             Agama::Storage::DeviceSettings::NewLvmVg.new(devices)
           end
         end
 
         def boot_conversion
-          boot_schema = schema_settings["boot"]
+          boot_schema = schema_settings[:boot]
           return unless boot_schema
 
           Agama::Storage::BootSettings.new.tap do |boot_settings|
-            boot_settings.configure = boot_schema["configure"]
-            boot_settings.device = boot_schema["device"]
+            boot_settings.configure = boot_schema[:configure]
+            boot_settings.device = boot_schema[:device]
           end
         end
 
         def encryption_conversion
-          encryption_schema = schema_settings["encryption"]
+          encryption_schema = schema_settings[:encryption]
           return unless encryption_schema
 
           Agama::Storage::EncryptionSettings.new.tap do |encryption_settings|
-            encryption_settings.password = encryption_schema["password"]
+            encryption_settings.password = encryption_schema[:password]
 
-            if method_value = encryption_schema["method"]
+            if method_value = encryption_schema[:method]
               method = Y2Storage::EncryptionMethod.find(method_value.to_sym)
               encryption_settings.method = method
             end
 
-            if function_value = encryption_schema["pbkdFunction"]
+            if function_value = encryption_schema[:pbkdFunction]
               function = Y2Storage::PbkdFunction.find(function_value)
               encryption_settings.pbkd_function = function
             end
@@ -113,19 +113,25 @@ module Agama
         end
 
         def space_conversion
-          space_schema = schema_settings["space"]
+          space_schema = schema_settings[:space]
           return unless space_schema
 
           Agama::Storage::SpaceSettings.new.tap do |space_settings|
-            space_settings.policy = space_schema["policy"]
+            space_settings.policy = space_schema[:policy].to_sym
 
-            actions_value = space_schema["actions"] || []
-            space_settings.actions = actions_value.map(&:invert).inject(:merge)
+            actions_value = space_schema[:actions] || []
+            space_settings.actions = actions_value.map { |a| action_conversion(a) }.inject(:merge)
           end
         end
 
+        def action_conversion(action)
+          return action.invert unless action[:forceDelete]
+
+          { action[:forceDelete] => :force_delete }
+        end
+
         def volumes_conversion
-          volumes_schema = schema_settings["volumes"]
+          volumes_schema = schema_settings[:volumes]
           return [] unless volumes_schema
 
           volumes_schema.map do |volume_schema|
