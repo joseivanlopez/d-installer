@@ -40,8 +40,6 @@ impl<'a> Store<'a> {
     }
 
     /// Loads the installation settings from the HTTP interface.
-    ///
-    // TODO: load storage settings.
     pub async fn load(&self) -> Result<InstallSettings, ServiceError> {
         let mut settings: InstallSettings = Default::default();
         settings.network = Some(self.network.load().await?);
@@ -49,6 +47,10 @@ impl<'a> Store<'a> {
         settings.user = Some(self.users.load().await?);
         settings.product = Some(self.product.load().await?);
         settings.localization = Some(self.localization.load().await?);
+
+        let storage_settings = self.storage.load().await?;
+        settings.storage = storage_settings.storage.clone();
+        settings.storage_autoyast = storage_settings.storage_autoyast.clone();
 
         // TODO: use try_join here
         Ok(settings)
@@ -75,7 +77,7 @@ impl<'a> Store<'a> {
             self.users.store(user).await?;
         }
         if settings.storage.is_some() || settings.storage_autoyast.is_some() {
-            self.storage.store(settings).await?
+            self.storage.store(settings.into()).await?
         }
         Ok(())
     }

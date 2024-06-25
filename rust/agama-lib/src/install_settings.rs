@@ -26,8 +26,10 @@ pub struct InstallSettings {
     #[serde(default)]
     pub product: Option<ProductSettings>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub storage: Option<Box<RawValue>>,
     #[serde(default, rename = "legacyAutoyastStorage")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub storage_autoyast: Option<Box<RawValue>>,
     #[serde(default)]
     pub network: Option<NetworkSettings>,

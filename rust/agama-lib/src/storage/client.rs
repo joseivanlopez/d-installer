@@ -2,13 +2,12 @@
 
 use super::model::{
     Action, BlockDevice, Component, Device, DeviceInfo, DeviceSid, Drive, Filesystem, LvmLv, LvmVg,
-    Md, Multipath, Partition, PartitionTable, ProposalSettings, ProposalSettingsPatch,
-    ProposalTarget, Raid, Volume,
+    Md, Multipath, Partition, PartitionTable, ProposalSettings, ProposalSettingsPatch, Raid, Volume,
 };
 use super::proxies::{ProposalCalculatorProxy, ProposalProxy, Storage1Proxy};
+use super::StorageSettings;
 use crate::dbus::get_property;
 use crate::error::ServiceError;
-use crate::install_settings::InstallSettings;
 use std::collections::HashMap;
 use zbus::fdo::ObjectManagerProxy;
 use zbus::names::{InterfaceName, OwnedInterfaceName};
@@ -105,50 +104,27 @@ impl<'a> StorageClient<'a> {
         Ok(self.proposal_proxy.settings().await?.try_into()?)
     }
 
-    /// Returns the boot device proposal setting
-    /// DEPRECATED, use proposal_settings instead
-    pub async fn boot_device(&self) -> Result<Option<String>, ServiceError> {
-        let settings = self.proposal_settings().await?;
-        let boot_device = settings.boot_device;
-
-        if boot_device.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(boot_device))
-        }
-    }
-
-    /// Returns the lvm proposal setting
-    /// DEPRECATED, use proposal_settings instead
-    pub async fn lvm(&self) -> Result<Option<bool>, ServiceError> {
-        let settings = self.proposal_settings().await?;
-        Ok(Some(!matches!(settings.target, ProposalTarget::Disk)))
-    }
-
-    /// Returns the encryption password proposal setting
-    /// DEPRECATED, use proposal_settings instead
-    pub async fn encryption_password(&self) -> Result<Option<String>, ServiceError> {
-        let settings = self.proposal_settings().await?;
-        let value = settings.encryption_password;
-
-        if value.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(value))
-        }
-    }
-
     /// Runs the probing process
     pub async fn probe(&self) -> Result<(), ServiceError> {
         Ok(self.storage_proxy.probe().await?)
     }
 
-    /// Loads the config
-    pub async fn load_config(&self, settings: &InstallSettings) -> Result<u32, ServiceError> {
+    /// Set the storage config according to JSON schema
+    pub async fn set_config(&self, settings: StorageSettings) -> Result<u32, ServiceError> {
         Ok(self
             .storage_proxy
-            .load_config(serde_json::to_string(settings).unwrap().as_str())
+            .set_config(serde_json::to_string(&settings).unwrap().as_str())
             .await?)
+    }
+
+    /// Get the storage config according to JSON schema
+    pub async fn get_config(&self) -> Result<StorageSettings, ServiceError> {
+        let serialized_settings = self
+            .storage_proxy
+            .get_config()
+            .await?;
+        let settings = serde_json::from_str(serialized_settings.as_str()).unwrap();
+        Ok(settings)
     }
 
     pub async fn calculate(&self, settings: ProposalSettingsPatch) -> Result<u32, ServiceError> {

@@ -18,7 +18,11 @@ trait Storage1 {
     /// Probe method
     fn probe(&self) -> zbus::Result<()>;
 
-    fn load_config(&self, settings: &str) -> zbus::Result<u32>;
+    /// Set the storage config according to the JSON schema
+    fn set_config(&self, settings: &str) -> zbus::Result<u32>;
+
+    /// Get the current storage config according to the JSON schema
+    fn get_config(&self) -> zbus::Result<String>;
 
     /// DeprecatedSystem property
     #[dbus_proxy(property)]
