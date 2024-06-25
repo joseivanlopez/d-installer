@@ -54,7 +54,7 @@ module Agama
       # @param config [Agama::Config]
       #
       # @return [Agama::Storage::ProposalSettings]
-      def self.from_schema(schema_settings, config: config)
+      def self.from_schema(schema_settings, config:)
         FromSchema.new(schema_settings, config: config).convert
       end
 
