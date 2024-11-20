@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2022-2024] SUSE LLC
+ * Copyright (c) [2024] SUSE LLC
  *
  * All Rights Reserved.
  *
@@ -23,8 +23,7 @@
 import React, { useRef } from "react";
 import { Grid, GridItem, Stack } from "@patternfly/react-core";
 import { Page, Drawer } from "~/components/core/";
-import ProposalResultSection from "./ProposalResultSection";
-import ProposalActionsSummary from "~/components/storage/ProposalActionsSummary";
+import AdvancedDevicesSection from "./AdvancedDevicesSection";
 import { ProposalActionsDialog } from "~/components/storage";
 import { _ } from "~/i18n";
 import { toValidationError } from "~/utils";
@@ -58,7 +57,7 @@ export const NOT_AFFECTED = {
   ProposalActionsSummary: [CHANGING.ENCRYPTION, CHANGING.TARGET],
 };
 
-export default function ProposalPage() {
+export default function AdvancedPage() {
   const drawerRef = useRef();
   const systemDevices = useDevices("system");
   const stagingDevices = useDevices("result");
@@ -84,7 +83,7 @@ export default function ProposalPage() {
   return (
     <Page>
       <Page.Header>
-        <h2>{_("Storage")}</h2>
+        <h2>{_("Advanced storage")}</h2>
       </Page.Header>
 
       <Page.Content>
@@ -96,17 +95,7 @@ export default function ProposalPage() {
               panelContent={<ProposalActionsDialog actions={actions} />}
             >
               <Stack hasGutter>
-                <ProposalActionsSummary
-                  system={systemDevices}
-                  staging={stagingDevices}
-                  errors={errors}
-                  actions={actions}
-                  // @ts-expect-error: we do not know how to specify the type of
-                  // drawerRef properly and TS does not find the "open" property
-                  onActionsClick={drawerRef.current?.open}
-                  isLoading={false}
-                />
-                <ProposalResultSection
+                <AdvancedDevicesSection
                   system={systemDevices}
                   staging={stagingDevices}
                   actions={actions}
