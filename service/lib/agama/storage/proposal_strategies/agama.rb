@@ -44,8 +44,8 @@ module Agama
         end
 
         # @see Base#calculate
-        def calculate
-          @proposal = agama_proposal
+        def calculate(devicegraph: nil)
+          @proposal = agama_proposal(devicegraph: devicegraph)
           @proposal.propose
         ensure
           storage_manager.proposal = @proposal
@@ -66,11 +66,10 @@ module Agama
         # Instance of the Y2Storage proposal to be used to run the calculation.
         #
         # @return [Y2Storage::AgamaProposal]
-        def agama_proposal
+        def agama_proposal(devicegraph: nil)
           Y2Storage::AgamaProposal.new(config,
             product_config: product_config,
-            devicegraph:    probed_devicegraph,
-            disk_analyzer:  disk_analyzer,
+            devicegraph:    devicegraph&.dup,
             issues_list:    [])
         end
       end

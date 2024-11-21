@@ -222,6 +222,18 @@ export default class DevicesManager {
     return compact(systems);
   }
 
+  parentInStaging(device) {
+    return this.#parent(device, this.staging);
+  }
+
+  #parent(device, source) {
+    if (device.type !== "partition") return;
+
+    return source
+      .filter((d) => d.isDrive)
+      .find((d) => (d.partitionTable?.partitions || []).find((p) => p.sid === device.sid));
+  }
+
   /**
    * @param {number} sid
    * @param {StorageDevice[]} source

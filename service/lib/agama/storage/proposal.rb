@@ -108,7 +108,7 @@ module Agama
       #
       # @param source_json [Hash] Source JSON config according to the JSON schema.
       # @return [Boolean] Whether the proposal successes.
-      def calculate_from_json(source_json)
+      def calculate_from_json(source_json, incremental: false)
         # @todo Validate source_json with JSON schema.
 
         guided_json = source_json.dig(:storage, :guided)
@@ -118,7 +118,7 @@ module Agama
         if guided_json
           calculate_guided_from_json(guided_json)
         elsif storage_json
-          calculate_agama_from_json(storage_json)
+          calculate_agama_from_json(storage_json, incremental: incremental)
         elsif autoyast_json
           calculate_autoyast(autoyast_json)
         else
@@ -144,12 +144,16 @@ module Agama
       #
       # @param config [Agama::Storage::Config]
       # @return [Boolean] Whether the proposal successes.
-      def calculate_agama(config)
+      def calculate_agama(config, incremental: false)
         logger.info("Calculating proposal with agama strategy: #{config.inspect}")
         reset
         @source_config = config.copy
         @strategy = ProposalStrategies::Agama.new(product_config, logger, config)
-        calculate
+
+        staging = storage_manager.staging.dup
+        devicegraph = incremental ? staging : storage_manager.probed
+        success = calculate(devicegraph: devicegraph)
+        success
       end
 
       # Calculates a new proposal using the autoyast strategy.
@@ -266,25 +270,29 @@ module Agama
       #
       # @param config_json [Hash] e.g., { "drives": [] }.
       # @return [Boolean] Whether the proposal successes.
-      def calculate_agama_from_json(config_json)
+      def calculate_agama_from_json(config_json, incremental: false)
         config = ConfigConversions::FromJSON.new(
           config_json,
           default_paths:   product_config.default_paths,
           mandatory_paths: product_config.mandatory_paths
         ).convert
 
-        calculate_agama(config)
+        calculate_agama(config, incremental: incremental)
       end
 
       # Calculates a new proposal with the assigned strategy.
       #
       # @return [Boolean] Whether the proposal successes.
-      def calculate
+      def calculate(devicegraph: nil)
         return false unless storage_manager.probed?
 
         @calculate_error = nil
         begin
-          strategy.calculate
+          if strategy.is_a?(ProposalStrategies::Agama)
+            strategy.calculate(devicegraph: devicegraph)
+          else
+            strategy.calculate
+          end
         rescue Y2Storage::Error => e
           @calculate_error = e
         rescue StandardError => e

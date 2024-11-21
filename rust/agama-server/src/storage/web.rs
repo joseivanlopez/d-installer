@@ -114,6 +114,7 @@ pub async fn storage_service(dbus: zbus::Connection) -> Result<Router, ServiceEr
     let state = StorageState { client };
     let router = Router::new()
         .route("/config", put(set_config).get(get_config))
+        .route("/incremental_config", put(set_incremental_config))
         .route("/config_model", get(get_config_model))
         .route("/probe", post(probe))
         .route("/devices/dirty", get(devices_dirty))
@@ -202,6 +203,32 @@ async fn set_config(
     let _status: u32 = state
         .client
         .set_config(settings)
+        .await
+        .map_err(Error::Service)?;
+    Ok(Json(()))
+}
+
+/// Sets the storage configuration.
+///
+/// * `state`: service state.
+/// * `config`: storage configuration.
+#[utoipa::path(
+    put,
+    path = "/config",
+    context_path = "/api/storage",
+    operation_id = "set_storage_incrimental_config",
+    responses(
+        (status = 200, description = "Set the storage configuration"),
+        (status = 400, description = "The D-Bus service could not perform the action")
+    )
+)]
+async fn set_incremental_config(
+    State(state): State<StorageState<'_>>,
+    Json(settings): Json<StorageSettings>,
+) -> Result<Json<()>, Error> {
+    let _status: u32 = state
+        .client
+        .set_incremental_config(settings)
         .await
         .map_err(Error::Service)?;
     Ok(Json(()))

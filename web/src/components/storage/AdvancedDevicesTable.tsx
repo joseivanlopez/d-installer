@@ -38,8 +38,7 @@ import { TreeTableColumn } from "~/components/core/TreeTable";
 import { ActionsColumn } from "@patternfly/react-table";
 import { Toolbar, ToolbarItem, ToolbarContent } from "@patternfly/react-core";
 import { Button, SearchInput } from "@patternfly/react-core";
-import { useConfigMutation } from "~/queries/storage";
-import { config } from "~/types/storage";
+import { useConfigMutation, useIncrementalConfigMutation } from "~/queries/storage";
 
 type TableItem = StorageDevice | PartitionSlot;
 
@@ -114,28 +113,20 @@ const DeviceCustomSize = ({
   );
 };
 
-function installConfig(device: StorageDevice): config.Config {
+function installConfig(device: StorageDevice) {
   return {
     storage: {
       drives: [
         {
           search: device.name,
-          partitions: [
-            {
-              search: "*",
-              delete: true,
-            },
-            {
-              generate: "default",
-            },
-          ],
+          partitions: [{ generate: "default" }],
         },
       ],
     },
   };
 }
 
-function deleteAllPartitionsConfig(device: StorageDevice): config.Config {
+function deleteAllPartitionsConfig(device: StorageDevice) {
   return {
     storage: {
       boot: {
@@ -156,13 +147,83 @@ function deleteAllPartitionsConfig(device: StorageDevice): config.Config {
   };
 }
 
+function deletePartitionConfig(parent: StorageDevice, device: StorageDevice) {
+  return {
+    storage: {
+      boot: {
+        configure: false,
+      },
+      drives: [
+        {
+          search: parent.name,
+          partitions: [{ search: device.name, delete: true }],
+        },
+      ],
+    },
+  };
+}
+
+function addBootPartitionConfig(device: StorageDevice) {
+  return {
+    storage: {
+      boot: {
+        configure: true,
+        device: device.name,
+      },
+    },
+  };
+}
+
+function addHomePartitionConfig(device: StorageDevice) {
+  return {
+    storage: {
+      boot: { configure: false },
+      drives: [
+        {
+          search: device.name,
+          partitions: [{ filesystem: { path: "/home" } }],
+        },
+      ],
+    },
+  };
+}
+
+function addSwapPartitionConfig(device: StorageDevice) {
+  return {
+    storage: {
+      boot: { configure: false },
+      drives: [
+        {
+          search: device.name,
+          partitions: [{ filesystem: { path: "swap" } }],
+        },
+      ],
+    },
+  };
+}
+
 const DiskActions = ({ device }: { device: StorageDevice }) => {
-  const setConfig = useConfigMutation();
+  const setConfig = useIncrementalConfigMutation();
 
   const actions = [
     {
       title: "Use as installation device",
       onClick: () => setConfig.mutate(installConfig(device)),
+    },
+    {
+      isSeparator: true,
+    },
+    {
+      title: "Add boot partition",
+      onClick: () => setConfig.mutate(addBootPartitionConfig(device)),
+    },
+    {
+      title: "Add separate /home",
+      onClick: () => setConfig.mutate(addHomePartitionConfig(device)),
+    },
+    {
+      title: "Add separate swap",
+      onClick: () => setConfig.mutate(addSwapPartitionConfig(device)),
     },
     {
       isSeparator: true,
@@ -176,26 +237,39 @@ const DiskActions = ({ device }: { device: StorageDevice }) => {
   return <ActionsColumn items={actions} />;
 };
 
-const PartitionActions = ({ device }: { device: StorageDevice }) => {
-  // const setConfig = useConfigMutation();
+const PartitionActions = ({
+  device,
+  devicesManager,
+}: {
+  device: StorageDevice;
+  devicesManager: DevicesManager;
+}) => {
+  const setConfig = useIncrementalConfigMutation();
+  const parent = devicesManager.parentInStaging(device);
 
   const actions = [
     {
       title: "Delete",
-      // onClick: () => setConfig.mutate(deletePartitionConfig(device)),
-      onClick: () => console.log(`delete ${device.name}`),
+      onClick: () => setConfig.mutate(deletePartitionConfig(parent, device)),
     },
   ];
 
   return <ActionsColumn items={actions} />;
 };
 
-const DeviceActions = ({ item }: { item: TableItem }) => {
+const DeviceActions = ({
+  item,
+  devicesManager,
+}: {
+  item: TableItem;
+  devicesManager: DevicesManager;
+}) => {
   const device = toStorageDevice(item);
   if (!device) return;
 
   if (device.type === "disk") return <DiskActions device={device} />;
-  if (device.type === "partition") return <PartitionActions device={device} />;
+  if (device.type === "partition")
+    return <PartitionActions device={device} devicesManager={devicesManager} />;
 };
 
 const columns: (devicesManager: DevicesManager) => TreeTableColumn[] = (devicesManager) => {
@@ -216,7 +290,7 @@ const columns: (devicesManager: DevicesManager) => TreeTableColumn[] = (devicesM
   );
 
   const renderActions: (item: TableItem) => React.ReactNode = (item) => (
-    <DeviceActions item={item} />
+    <DeviceActions item={item} devicesManager={devicesManager} />
   );
 
   return [
@@ -243,7 +317,7 @@ export default function AdvancedDevicesTable({ devicesManager }: ProposalResultT
   const devices = devicesManager.stagingDevices();
 
   const reset = () => {
-    const config: config.Config = {
+    const config = {
       storage: {
         boot: {
           configure: false,

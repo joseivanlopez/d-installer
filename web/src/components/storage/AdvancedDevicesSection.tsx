@@ -22,12 +22,13 @@
 
 import React from "react";
 import { Skeleton, Stack } from "@patternfly/react-core";
-import { EmptyState, Page } from "~/components/core";
+import { Page } from "~/components/core";
 import DevicesManager from "~/components/storage/DevicesManager";
 import AdvancedDevicesTable from "~/components/storage/AdvancedDevicesTable";
 import { _ } from "~/i18n";
 import { Action, StorageDevice } from "~/types/storage";
 import { ValidationError } from "~/types/issues";
+import { Alert } from "@patternfly/react-core";
 
 /**
  * @todo Create a component for rendering a customized skeleton
@@ -61,19 +62,15 @@ export default function ProposalResultSection({
   return (
     <Page.Section aria-label={_("The systems will be configured as displayed below.")}>
       {isLoading && <ResultSkeleton />}
-      {errors.length === 0 ? (
-        <AdvancedDevicesTable devicesManager={new DevicesManager(system, staging, actions)} />
-      ) : (
-        <EmptyState
-          icon="error"
-          title={_("Storage proposal not possible")}
-          color="danger-color-100"
-        >
-          {errors.map((e, i) => (
-            <div key={i}>{e.message}</div>
-          ))}
-        </EmptyState>
+      {errors.length > 0 && (
+        <Alert
+          variant="danger"
+          title={_("The requested action cannot be done")}
+          ouiaId="DangerAlert"
+          style={{ marginBlockEnd: "14px" }}
+        />
       )}
+      <AdvancedDevicesTable devicesManager={new DevicesManager(system, staging, actions)} />
     </Page.Section>
   );
 }
