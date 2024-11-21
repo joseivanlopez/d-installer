@@ -35,6 +35,11 @@ import { sprintf } from "sprintf-js";
 import { deviceChildren, deviceSize } from "~/components/storage/utils";
 import { PartitionSlot, StorageDevice } from "~/types/storage";
 import { TreeTableColumn } from "~/components/core/TreeTable";
+import { ActionsColumn } from "@patternfly/react-table";
+import { Toolbar, ToolbarItem, ToolbarContent } from "@patternfly/react-core";
+import { Button, SearchInput } from "@patternfly/react-core";
+import { useConfigMutation } from "~/queries/storage";
+import { config } from "~/types/storage";
 
 type TableItem = StorageDevice | PartitionSlot;
 
@@ -109,11 +114,88 @@ const DeviceCustomSize = ({
   );
 };
 
+function installConfig(device: StorageDevice): config.Config {
+  return {
+    storage: {
+      drives: [
+        {
+          search: device.name,
+          partitions: [
+            {
+              search: "*",
+              delete: true,
+            },
+            {
+              generate: "default",
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+function deleteAllPartitionsConfig(device: StorageDevice): config.Config {
+  return {
+    storage: {
+      boot: {
+        configure: false,
+      },
+      drives: [
+        {
+          search: device.name,
+          partitions: [
+            {
+              search: "*",
+              delete: true,
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+const DiskActions = ({ device }: { device: StorageDevice }) => {
+  const setConfig = useConfigMutation();
+
+  const actions = [
+    {
+      title: "Use as installation device",
+      onClick: () => setConfig.mutate(installConfig(device)),
+    },
+    {
+      isSeparator: true,
+    },
+    {
+      title: "Delete all partition",
+      onClick: () => setConfig.mutate(deleteAllPartitionsConfig(device)),
+    },
+  ];
+
+  return <ActionsColumn items={actions} />;
+};
+
+const PartitionActions = ({ device }: { device: StorageDevice }) => {
+  // const setConfig = useConfigMutation();
+
+  const actions = [
+    {
+      title: "Delete",
+      // onClick: () => setConfig.mutate(deletePartitionConfig(device)),
+      onClick: () => console.log(`delete ${device.name}`),
+    },
+  ];
+
+  return <ActionsColumn items={actions} />;
+};
+
 const DeviceActions = ({ item }: { item: TableItem }) => {
   const device = toStorageDevice(item);
   if (!device) return;
 
-  return _("actions");
+  if (device.type === "disk") return <DiskActions device={device} />;
+  if (device.type === "partition") return <PartitionActions device={device} />;
 };
 
 const columns: (devicesManager: DevicesManager) => TreeTableColumn[] = (devicesManager) => {
@@ -155,19 +237,54 @@ type ProposalResultTableProps = {
  * @component
  */
 export default function AdvancedDevicesTable({ devicesManager }: ProposalResultTableProps) {
+  const setConfig = useConfigMutation();
+
   // const devices = devicesManager.usedDevices();
   const devices = devicesManager.stagingDevices();
 
+  const reset = () => {
+    const config: config.Config = {
+      storage: {
+        boot: {
+          configure: false,
+        },
+      },
+    };
+
+    setConfig.mutate(config);
+  };
+
   return (
-    <TreeTable
-      columns={columns(devicesManager)}
-      items={devices}
-      expandedItems={devices}
-      itemChildren={deviceChildren}
-      rowClassNames={(item) => {
-        if (!item.sid) return "dimmed-row";
-      }}
-      className="proposal-result"
-    />
+    <>
+      <Toolbar id="toolbar-items-example" style={{ marginBlockEnd: "18px" }}>
+        <ToolbarContent>
+          <ToolbarItem>
+            <SearchInput aria-label={_("Items example search input")} />
+          </ToolbarItem>
+          <ToolbarItem>
+            <Button variant="secondary">{_("Add LVM")}</Button>
+          </ToolbarItem>
+          <ToolbarItem>
+            <Button variant="secondary">{_("Add RAID")}</Button>
+          </ToolbarItem>
+          <ToolbarItem variant="separator" />
+          <ToolbarItem>
+            <Button variant="secondary" onClick={reset}>
+              {_("Reset")}
+            </Button>
+          </ToolbarItem>
+        </ToolbarContent>
+      </Toolbar>
+      <TreeTable
+        columns={columns(devicesManager)}
+        items={devices}
+        expandedItems={devices}
+        itemChildren={deviceChildren}
+        rowClassNames={(item) => {
+          if (!item.sid) return "dimmed-row";
+        }}
+        className="proposal-result"
+      />
+    </>
   );
 }
