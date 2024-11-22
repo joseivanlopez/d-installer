@@ -20,7 +20,7 @@
  * find current contact information at www.suse.com.
  */
 
-import React from "react";
+import React, { useRef } from "react";
 import { Label, Flex } from "@patternfly/react-core";
 import {
   DeviceName,
@@ -29,7 +29,7 @@ import {
   toStorageDevice,
 } from "~/components/storage/device-utils";
 import DevicesManager from "~/components/storage/DevicesManager";
-import { TreeTable } from "~/components/core";
+import { Drawer, TreeTable } from "~/components/core";
 import { _ } from "~/i18n";
 import { sprintf } from "sprintf-js";
 import { deviceChildren, deviceSize } from "~/components/storage/utils";
@@ -38,7 +38,13 @@ import { TreeTableColumn } from "~/components/core/TreeTable";
 import { ActionsColumn } from "@patternfly/react-table";
 import { Toolbar, ToolbarItem, ToolbarContent } from "@patternfly/react-core";
 import { Button, SearchInput } from "@patternfly/react-core";
-import { useConfigMutation, useIncrementalConfigMutation } from "~/queries/storage";
+import {
+  useConfigMutation,
+  useIncrementalConfigMutation,
+  useProposalResult,
+} from "~/queries/storage";
+import OpenDrawerRightIcon from "@patternfly/react-icons/dist/esm/icons/open-drawer-right-icon";
+import { ProposalActionsDialog } from "~/components/storage";
 
 type TableItem = StorageDevice | PartitionSlot;
 
@@ -311,6 +317,8 @@ type ProposalResultTableProps = {
  * @component
  */
 export default function AdvancedDevicesTable({ devicesManager }: ProposalResultTableProps) {
+  const drawerRef = useRef();
+  const { actions } = useProposalResult();
   const setConfig = useConfigMutation();
 
   // const devices = devicesManager.usedDevices();
@@ -330,35 +338,52 @@ export default function AdvancedDevicesTable({ devicesManager }: ProposalResultT
 
   return (
     <>
-      <Toolbar id="toolbar-items-example" style={{ marginBlockEnd: "18px" }}>
-        <ToolbarContent>
-          <ToolbarItem>
-            <SearchInput aria-label={_("Items example search input")} />
-          </ToolbarItem>
-          <ToolbarItem>
-            <Button variant="secondary">{_("Add LVM")}</Button>
-          </ToolbarItem>
-          <ToolbarItem>
-            <Button variant="secondary">{_("Add RAID")}</Button>
-          </ToolbarItem>
-          <ToolbarItem variant="separator" />
-          <ToolbarItem>
-            <Button variant="secondary" onClick={reset}>
-              {_("Reset")}
-            </Button>
-          </ToolbarItem>
-        </ToolbarContent>
-      </Toolbar>
-      <TreeTable
-        columns={columns(devicesManager)}
-        items={devices}
-        expandedItems={devices}
-        itemChildren={deviceChildren}
-        rowClassNames={(item) => {
-          if (!item.sid) return "dimmed-row";
-        }}
-        className="proposal-result"
-      />
+      <Drawer
+        ref={drawerRef}
+        panelHeader={<h4>{_("Planned Actions")}</h4>}
+        panelContent={<ProposalActionsDialog actions={actions} />}
+      >
+        <Flex justifyContent={{ default: "justifyContentSpaceBetween" }}>
+          <Toolbar id="toolbar-items-example" style={{ marginBlockEnd: "18px" }}>
+            <ToolbarContent>
+              <ToolbarItem>
+                <SearchInput aria-label={_("Items example search input")} />
+              </ToolbarItem>
+              <ToolbarItem>
+                <Button variant="secondary">{_("Add LVM")}</Button>
+              </ToolbarItem>
+              <ToolbarItem>
+                <Button variant="secondary">{_("Add RAID")}</Button>
+              </ToolbarItem>
+              <ToolbarItem variant="separator" />
+              <ToolbarItem>
+                <Button variant="secondary" isDanger onClick={reset}>
+                  {_("Reset")}
+                </Button>
+              </ToolbarItem>
+            </ToolbarContent>
+          </Toolbar>
+          <Button
+            isDisabled={!actions.length}
+            variant="secondary"
+            icon={<OpenDrawerRightIcon />}
+            iconPosition="end"
+            onClick={drawerRef.current?.open}
+          >
+            {_("Actions")}
+          </Button>
+        </Flex>
+        <TreeTable
+          columns={columns(devicesManager)}
+          items={devices}
+          expandedItems={devices}
+          itemChildren={deviceChildren}
+          rowClassNames={(item) => {
+            if (!item.sid) return "dimmed-row";
+          }}
+          className="proposal-result"
+        />
+      </Drawer>
     </>
   );
 }
