@@ -20,7 +20,7 @@
  * find current contact information at www.suse.com.
  */
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { Label, Flex } from "@patternfly/react-core";
 import {
   DeviceName,
@@ -45,6 +45,7 @@ import {
 } from "~/queries/storage";
 import OpenDrawerRightIcon from "@patternfly/react-icons/dist/esm/icons/open-drawer-right-icon";
 import { ProposalActionsDialog } from "~/components/storage";
+import AddPartitionDialog from "./AddPartitionDialog";
 
 type TableItem = StorageDevice | PartitionSlot;
 
@@ -208,7 +209,7 @@ function addSwapPartitionConfig(device: StorageDevice) {
   };
 }
 
-const DiskActions = ({ device }: { device: StorageDevice }) => {
+const DiskActions = ({ device, action }: { device: StorageDevice; action }) => {
   const setConfig = useIncrementalConfigMutation();
 
   const actions = [
@@ -230,6 +231,13 @@ const DiskActions = ({ device }: { device: StorageDevice }) => {
     {
       title: "Add separate swap",
       onClick: () => setConfig.mutate(addSwapPartitionConfig(device)),
+    },
+    {
+      isSeparator: true,
+    },
+    {
+      title: "Add custom partition",
+      onClick: () => action(device),
     },
     {
       isSeparator: true,
@@ -266,19 +274,21 @@ const PartitionActions = ({
 const DeviceActions = ({
   item,
   devicesManager,
+  action,
 }: {
   item: TableItem;
   devicesManager: DevicesManager;
+  action;
 }) => {
   const device = toStorageDevice(item);
   if (!device) return;
 
-  if (device.type === "disk") return <DiskActions device={device} />;
+  if (device.type === "disk") return <DiskActions device={device} action={action} />;
   if (device.type === "partition")
     return <PartitionActions device={device} devicesManager={devicesManager} />;
 };
 
-const columns: (devicesManager: DevicesManager) => TreeTableColumn[] = (devicesManager) => {
+function columns(devicesManager: DevicesManager, action): TreeTableColumn[] {
   const renderDevice: (item: TableItem) => React.ReactNode = (item): React.ReactNode => (
     <DeviceName item={item} />
   );
@@ -296,7 +306,7 @@ const columns: (devicesManager: DevicesManager) => TreeTableColumn[] = (devicesM
   );
 
   const renderActions: (item: TableItem) => React.ReactNode = (item) => (
-    <DeviceActions item={item} devicesManager={devicesManager} />
+    <DeviceActions item={item} devicesManager={devicesManager} action={action} />
   );
 
   return [
@@ -306,7 +316,7 @@ const columns: (devicesManager: DevicesManager) => TreeTableColumn[] = (devicesM
     { name: _("Size"), value: renderSize, classNames: "sizes-column" },
     { name: undefined, value: renderActions },
   ];
-};
+}
 
 type ProposalResultTableProps = {
   devicesManager: DevicesManager;
@@ -320,6 +330,9 @@ export default function AdvancedDevicesTable({ devicesManager }: ProposalResultT
   const drawerRef = useRef();
   const { actions } = useProposalResult();
   const setConfig = useConfigMutation();
+  const setIncrementalConfig = useIncrementalConfigMutation();
+  const [isAddPartitionOpen, setIsAddPartitionOpen] = useState(false);
+  const [device, setDevice] = useState();
 
   // const devices = devicesManager.usedDevices();
   const devices = devicesManager.stagingDevices();
@@ -334,6 +347,16 @@ export default function AdvancedDevicesTable({ devicesManager }: ProposalResultT
     };
 
     setConfig.mutate(config);
+  };
+
+  const addPartition = (config) => {
+    setIncrementalConfig.mutate(config);
+    setIsAddPartitionOpen(false);
+  };
+
+  const action = (device) => {
+    setDevice(device);
+    setIsAddPartitionOpen(true);
   };
 
   return (
@@ -374,7 +397,7 @@ export default function AdvancedDevicesTable({ devicesManager }: ProposalResultT
           </Button>
         </Flex>
         <TreeTable
-          columns={columns(devicesManager)}
+          columns={columns(devicesManager, action)}
           items={devices}
           expandedItems={devices}
           itemChildren={deviceChildren}
@@ -384,6 +407,14 @@ export default function AdvancedDevicesTable({ devicesManager }: ProposalResultT
           className="proposal-result"
         />
       </Drawer>
+      {isAddPartitionOpen && (
+        <AddPartitionDialog
+          isOpen
+          device={device}
+          onAccept={addPartition}
+          onCancel={() => setIsAddPartitionOpen(false)}
+        />
+      )}
     </>
   );
 }
