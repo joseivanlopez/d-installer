@@ -28,7 +28,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import React from "react";
-import { fetchConfig, fetchConfigModel, setConfig } from "~/api/storage";
+import { fetchConfig, fetchConfigModel, setConfig, setIncrementalConfig } from "~/api/storage";
 import { fetchDevices, fetchDevicesDirty } from "~/api/storage/devices";
 import {
   calculate,
@@ -144,6 +144,19 @@ const useConfigMutation = () => {
   const queryClient = useQueryClient();
   const query = {
     mutationFn: (config: config.Config) => setConfig(config),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["storage"] }),
+  };
+
+  return useMutation(query);
+};
+
+/**
+ * Hook for setting a new config.
+ */
+const useIncrementalConfigMutation = () => {
+  const queryClient = useQueryClient();
+  const query = {
+    mutationFn: (config) => setIncrementalConfig(config),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["storage"] }),
   };
 
@@ -334,6 +347,7 @@ const useDeprecatedChanges = () => {
 export {
   useConfig,
   useConfigMutation,
+  useIncrementalConfigMutation,
   useConfigModel,
   useDevices,
   useAvailableDevices,

@@ -158,6 +158,19 @@ export default class DevicesManager {
   }
 
   /**
+   * @returns {StorageDevice[]}
+   */
+  stagingDevices() {
+    const sortFn = (a, b) => (a.name < b.name ? -1 : 1);
+
+    const drives = this.staging.filter((d) => d.isDrive).sort(sortFn);
+    const vgs = this.staging.filter((d) => d.type === "lvmVg").sort(sortFn);
+    const mds = this.staging.filter((d) => d.type === "md").sort(sortFn);
+
+    return [...drives, ...vgs, ...mds];
+  }
+
+  /**
    * Devices deleted.
    * @method
    *
@@ -207,6 +220,18 @@ export default class DevicesManager {
       .map((d) => d.systems)
       .flat();
     return compact(systems);
+  }
+
+  parentInStaging(device) {
+    return this.#parent(device, this.staging);
+  }
+
+  #parent(device, source) {
+    if (device.type !== "partition") return;
+
+    return source
+      .filter((d) => d.isDrive)
+      .find((d) => (d.partitionTable?.partitions || []).find((p) => p.sid === device.sid));
   }
 
   /**

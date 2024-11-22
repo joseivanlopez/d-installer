@@ -31,3 +31,4 @@ export { default as DeviceSelectorTable } from "./DeviceSelectorTable";
 export { default as DevicesFormSelect } from "./DevicesFormSelect";
 export { default as SpaceActionsTable } from "./SpaceActionsTable";
 export { default as DeviceSelection } from "./DeviceSelection";
+export { default as AdvancedPage } from "./AdvancedPage";

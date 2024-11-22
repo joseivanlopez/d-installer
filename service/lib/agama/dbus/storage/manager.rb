@@ -103,11 +103,11 @@ module Agama
         #
         # @param serialized_config [String] Serialized storage config.
         # @return [Integer] 0 success; 1 error
-        def apply_config(serialized_config)
+        def apply_config(serialized_config, incremental: false)
           logger.info("Setting storage config from D-Bus: #{serialized_config}")
 
           config_json = JSON.parse(serialized_config, symbolize_names: true)
-          proposal.calculate_from_json(config_json)
+          proposal.calculate_from_json(config_json, incremental: incremental)
           proposal.success? ? 0 : 1
         end
 
@@ -146,6 +146,9 @@ module Agama
           dbus_method(:Probe) { probe }
           dbus_method(:SetConfig, "in serialized_config:s, out result:u") do |serialized_config|
             busy_while { apply_config(serialized_config) }
+          end
+          dbus_method(:SetIncrementalConfig, "in serialized_config:s, out result:u") do |serialized_config|
+            busy_while { apply_config(serialized_config, incremental: true) }
           end
           dbus_method(:GetConfig, "out serialized_config:s") { recover_config }
           dbus_method(:GetConfigModel, "out serialized_model:s") { recover_model }

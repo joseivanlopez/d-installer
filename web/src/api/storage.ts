@@ -40,6 +40,8 @@ const fetchConfigModel = (): Promise<configModel.Config | undefined> =>
 
 const setConfig = (config: config.Config) => put("/api/storage/config", config);
 
+const setIncrementalConfig = (config) => put("/api/storage/incremental_config", config);
+
 /**
  * Returns the list of jobs
  */
@@ -69,6 +71,7 @@ export {
   fetchConfig,
   fetchConfigModel,
   setConfig,
+  setIncrementalConfig,
   fetchStorageJobs,
   findStorageJob,
   refresh,

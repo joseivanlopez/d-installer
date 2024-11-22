@@ -147,6 +147,14 @@ impl<'a> StorageClient<'a> {
             .await?)
     }
 
+    /// Set the storage config according to the JSON schema
+    pub async fn set_incremental_config(&self, settings: StorageSettings) -> Result<u32, ServiceError> {
+        Ok(self
+            .storage_proxy
+            .set_incremental_config(serde_json::to_string(&settings).unwrap().as_str())
+            .await?)
+    }
+
     /// Get the storage config according to the JSON schema
     pub async fn get_config(&self) -> Result<StorageSettings, ServiceError> {
         let serialized_settings = self.storage_proxy.get_config().await?;

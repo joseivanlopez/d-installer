@@ -23,7 +23,7 @@
 import React from "react";
 import BootSelection from "~/components/storage/BootSelection";
 import SpacePolicySelection from "~/components/storage/SpacePolicySelection";
-import { DeviceSelection, ISCSIPage, ProposalPage } from "~/components/storage";
+import { DeviceSelection, ISCSIPage, ProposalPage, AdvancedPage } from "~/components/storage";
 
 import { Route } from "~/types/routes";
 import { N_ } from "~/i18n";
@@ -44,6 +44,7 @@ const PATHS = {
     root: "/storage/zfcp",
     activateDisk: "/storage/zfcp/active-disk",
   },
+  advanced: "/storage/advanced",
 };
 
 const routes = (): Route => ({
@@ -96,6 +97,10 @@ const routes = (): Route => ({
         if (!supportedZFCP()) return redirect(PATHS.targetDevice);
         return probeZFCP();
       },
+    },
+    {
+      path: PATHS.advanced,
+      element: <AdvancedPage />,
     },
   ],
 });
