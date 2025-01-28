@@ -45,7 +45,7 @@ import { Page } from "~/components/core/";
 import SelectTypeaheadCreatable from "~/components/core/SelectTypeaheadCreatable";
 import SelectToggle from "~/components/core/SelectToggle";
 import { useDevices, useVolumeTemplates } from "~/queries/storage";
-import { useDrive } from "~/queries/storage/config-model";
+import { useConfigModel, useDrive } from "~/queries/storage/config-model";
 import { StorageDevice, Volume } from "~/types/storage";
 import { baseName, deviceSize, parseToBytes } from "~/components/storage/utils";
 import { _ } from "~/i18n";
@@ -104,11 +104,21 @@ function usePartition(target: string): StorageDevice | null {
   return findPartition(device, target);
 }
 
-/** @todo Filter used mount points */
+function useAssignedMountPaths(): string[] {
+  const model = useConfigModel({ suspense: true });
+  const drives = model.drives.map((d) => useDrive(d.name));
+
+  return drives.flatMap((d) => d.allMountPaths);
+}
+
+/** @todo include the currently used mount point when editing */
 function mountPointOptions(volumes: Volume[]): SelectOptionProps[] {
-  return volumes
-    .filter((v) => v.mountPath.length)
-    .map((v) => ({ value: v.mountPath, children: v.mountPath }));
+  const volPaths = volumes.filter((v) => v.mountPath.length).map((v) => v.mountPath);
+  const assigned = useAssignedMountPaths();
+
+  return volPaths
+    .filter((p) => !assigned.includes(p))
+    .map((p) => ({ value: p, children: p }));
 }
 
 type TargetOptionLabelProps = {
