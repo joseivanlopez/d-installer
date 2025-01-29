@@ -526,7 +526,7 @@ type ErrorsHandler = {
   getVisibleError: (id: string) => Error | undefined;
 };
 
-function mountPointError(mountPoint: string): Error | undefined {
+function mountPointError(mountPoint: string, assignedPoints: string[]): Error | undefined {
   if (mountPoint === NO_VALUE) {
     return {
       id: "mountPoint",
@@ -542,10 +542,20 @@ function mountPointError(mountPoint: string): Error | undefined {
       isVisible: true,
     };
   }
+
+  // TODO: exclude itself when editing
+  if (assignedPoints.includes(mountPoint)) {
+    return {
+      id: "mountPoint",
+      message: _("The mount point is already assigned to another device"),
+      isVisible: true,
+    };
+  }
 }
 
 function useErrors(value: FormValue): ErrorsHandler {
-  const errors = compact([mountPointError(value.mountPoint)]);
+  const assigned = useAssignedMountPaths();
+  const errors = compact([mountPointError(value.mountPoint, assigned)]);
 
   const getError = (id: string): Error | undefined => errors.find((e) => e.id === id);
 
