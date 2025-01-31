@@ -453,7 +453,7 @@ function CustomSize({ value, mountPoint, onChange }: CustomSizeProps) {
  *  This will be fixed in the future by directly exporting the volumes as a JSON, similar to the
  *  config model. The schema for the volumes will define the explicit list of filesystem types.
  */
-function isFileystemType(_value: string): _value is configModel.FilesystemType {
+function isFilesystemType(_value: string): _value is configModel.FilesystemType {
   return true;
 }
 
@@ -468,7 +468,7 @@ function partitionConfig(value: FormValue): configModel.Partition {
     if (value.filesystem === NO_VALUE) return undefined;
     if (value.filesystem === BTRFS_SNAPSHOTS) return "btrfs";
 
-    isFileystemType(value.filesystem) ? value.filesystem : undefined;
+    return isFilesystemType(value.filesystem) ? value.filesystem : undefined;
   };
 
   const filesystem = (): configModel.Filesystem | undefined => {
